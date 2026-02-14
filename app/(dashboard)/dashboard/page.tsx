@@ -35,9 +35,8 @@ export default function DashboardPage() {
         problemsSolved: 0,
         companiesUnlocked: 0
     });
-    const supabase = createClient();
-
     useEffect(() => {
+        const supabase = createClient();
         const getData = async () => {
             const { data: { user } } = await supabase.auth.getUser();
 

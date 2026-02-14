@@ -46,25 +46,28 @@ export default function TranscriberPage() {
         setSelectedTranscription(null);
     };
 
-    const fetchTranscriptions = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
 
-        const { data, error } = await supabase
-            .from('transcriptions')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error('Error fetching transcriptions:', error);
-        } else {
-            setTranscriptions(data || []);
-        }
-        setLoading(false);
-    };
 
     useEffect(() => {
+        const fetchTranscriptions = async () => {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data, error } = await supabase
+                .from('transcriptions')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching transcriptions:', error);
+            } else {
+                setTranscriptions(data || []);
+            }
+            setLoading(false);
+        };
+
         fetchTranscriptions();
     }, []);
 
@@ -380,7 +383,6 @@ export default function TranscriberPage() {
                                     onClick={() => fileInputRef.current?.click()}
                                     loading={uploading}
                                     disabled={isListening || isRecording}
-                                    size="lg"
                                     px={10}
                                 >
                                     Select File
