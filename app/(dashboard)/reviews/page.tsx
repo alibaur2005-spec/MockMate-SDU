@@ -101,7 +101,7 @@ export default function ReviewsListPage() {
                     <VStack py={12} bg="bgSub" borderRadius="xl" gap={4} textAlign="center">
                         <Heading size="md">No interviews yet</Heading>
                         <Text color="fgMuted">Start practicing to see your results here.</Text>
-                        <Button colorPalette="brand" onClick={() => router.push('/companies')}>
+                        <Button colorPalette="brand" px={8} onClick={() => router.push('/companies')}>
                             Start Practice <FaArrowRight style={{ marginLeft: '8px' }} />
                         </Button>
                     </VStack>

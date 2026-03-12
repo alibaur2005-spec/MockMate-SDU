@@ -370,13 +370,13 @@ export default function TranscriberPage() {
 
                 {/* Upload Area */}
                 <Card.Root variant="elevated" borderStyle="dashed" borderWidth="2px" borderColor="border">
-                    <Card.Body py={16} px={6} textAlign="center">
+                    <Card.Body style={{ padding: '40px' }} textAlign="center">
                         <VStack gap={4}>
                             <Icon as={FaCloudUploadAlt} boxSize={16} color="brand.500" />
                             <Heading size="lg">Upload or Record Audio</Heading>
                             <Text color="fgMuted">Drag and drop, browse, or record directly</Text>
 
-                            <HStack gap={4} wrap="wrap">
+                            <HStack gap={4} wrap="wrap" justify="center">
                                 <Button
                                     size="lg"
                                     colorPalette="brand"
@@ -464,9 +464,9 @@ export default function TranscriberPage() {
                         <VStack gap={4} align="stretch">
                             {transcriptions.map((t) => (
                                 <Card.Root key={t.id} variant="elevated">
-                                    <Card.Body p={6}>
+                                    <Card.Body style={{ padding: '24px' }}>
                                         <VStack align="stretch" gap={4}>
-                                            <HStack justify="space-between">
+                                            <HStack justify="space-between" w="full">
                                                 <HStack>
                                                     <Icon as={FaFileAudio} color="blue.500" />
                                                     <VStack align="start" gap={0}>

@@ -203,7 +203,7 @@ export default function CompanyDetailsPage({ params }: { params: Promise<{ id: s
                             <Heading size="2xl">{company.name}</Heading>
                             <Text color="fg.muted" fontSize="lg">{company.description}</Text>
                             <HStack>
-                                <Badge colorPalette="purple" variant="solid" size="lg">{questions.length} Questions Available</Badge>
+                                <Badge style={{ padding: '0 10px' }} colorPalette="purple" variant="solid" size="lg">{questions.length} Questions Available</Badge>
                             </HStack>
                         </VStack>
                     </HStack>
@@ -226,13 +226,13 @@ export default function CompanyDetailsPage({ params }: { params: Promise<{ id: s
                         <SimpleGrid columns={{ base: 1, md: 2 }} gap={6}>
                             {questions.map((q) => (
                                 <Card.Root key={q.id} variant="elevated" _hover={{ boxShadow: 'md' }}>
-                                    <Card.Body>
+                                    <Card.Body style={{ padding: '10px' }}>
                                         <VStack align="start" gap={4}>
                                             <HStack justify="space-between" w="full">
-                                                <Badge colorPalette={q.difficulty === 'Easy' ? 'green' : q.difficulty === 'Medium' ? 'yellow' : 'red'}>
+                                                <Badge style={{ padding: '0 10px' }} colorPalette={q.difficulty === 'Easy' ? 'green' : q.difficulty === 'Medium' ? 'yellow' : 'red'}>
                                                     {q.difficulty}
                                                 </Badge>
-                                                <Badge variant="outline" colorPalette="blue">{q.topic}</Badge>
+                                                <Badge style={{ padding: '0 10px' }} variant="outline" colorPalette="blue">{q.topic}</Badge>
                                             </HStack>
                                             <Heading size="md" lineHeight="tall">{q.content}</Heading>
                                             <Button

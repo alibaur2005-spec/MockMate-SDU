@@ -3,7 +3,7 @@
 import { Box, Flex, VStack, Heading, Text, Icon, HStack, Avatar, Spacer, IconButton, Collapsible, Button } from '@chakra-ui/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FaHome, FaUser, FaCode, FaMicrophone, FaHistory, FaBars, FaSignOutAlt, FaMoon, FaSun, FaBuilding, FaChartPie } from 'react-icons/fa';
 import { ColorModeButton } from '@/components/ui/color-mode';
 import { createClient } from '@/lib/supabase/client';
@@ -21,9 +21,14 @@ const NAV_ITEMS = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const [isSidebarOpen, setSidebarOpen] = useState(true);
+    const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
     const router = useRouter();
     const supabase = createClient();
+
+    // Close mobile menu on route change
+    useEffect(() => {
+        setMobileMenuOpen(false);
+    }, [pathname]);
 
     const handleLogout = async () => {
         try {
@@ -44,7 +49,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 bg="bg"
                 borderRight="1px solid"
                 borderColor="border"
-                w={{ base: isSidebarOpen ? '64' : '0', md: isSidebarOpen ? '64' : '20' }}
+                w={{ base: isMobileMenuOpen ? '64' : '0', md: '64' }}
                 transition="width 0.2s"
                 overflow="hidden"
                 position={{ base: 'fixed', md: 'sticky' }}
@@ -54,11 +59,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
                 <VStack h="full" align="stretch" p={4} gap={8}>
                     <Flex align="center" justify="space-between" px={2}>
-                        {isSidebarOpen && <Heading size="lg" color="brand.600">MockMate</Heading>}
+                        <Heading size="lg" color="brand.600">MockMate</Heading>
                         <IconButton
-                            aria-label="Toggle Sidebar"
+                            aria-label="Close Sidebar"
                             variant="ghost"
-                            onClick={() => setSidebarOpen(!isSidebarOpen)}
+                            onClick={() => setMobileMenuOpen(false)}
                             display={{ base: 'flex', md: 'none' }}
                         >
                             <Icon as={FaBars} />
@@ -80,7 +85,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                         gap={4}
                                     >
                                         <Icon as={item.icon} boxSize={5} />
-                                        {isSidebarOpen && <Text fontWeight={isActive ? 'semibold' : 'medium'}>{item.label}</Text>}
+                                        <Text fontWeight={isActive ? 'semibold' : 'medium'}>{item.label}</Text>
                                     </HStack>
                                 </Link>
                             );
@@ -93,12 +98,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             <Button
                                 variant="ghost"
                                 colorPalette="red"
-                                justifyContent={isSidebarOpen ? 'flex-start' : 'center'}
+                                justifyContent="flex-start"
                                 onClick={handleLogout}
                                 gap={4}
                             >
                                 <Icon as={FaSignOutAlt} />
-                                {isSidebarOpen && "Sign Out"}
+                                Sign Out
                             </Button>
                         </VStack>
                     </Box>
@@ -121,7 +126,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <IconButton
                         aria-label="Open Menu"
                         variant="ghost"
-                        onClick={() => setSidebarOpen(true)}
+                        onClick={() => setMobileMenuOpen(true)}
                     >
                         <Icon as={FaBars} />
                     </IconButton>
