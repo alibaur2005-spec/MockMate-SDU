@@ -30,10 +30,10 @@ export default function Home() {
                             ) : (
                                 <>
                                     <Link href="/login">
-                                        <Button variant="ghost" fontWeight="medium">Sign In</Button>
+                                        <Button variant="ghost" fontWeight="medium" px={6}>Sign In</Button>
                                     </Link>
                                     <Link href="/register">
-                                        <Button colorPalette="brand" borderRadius="full" fontWeight="bold">Get Started</Button>
+                                        <Button colorPalette="brand" borderRadius="full" fontWeight="bold" px={6}>Get Started</Button>
                                     </Link>
                                 </>
                             )}

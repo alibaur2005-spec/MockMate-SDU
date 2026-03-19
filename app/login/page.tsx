@@ -67,6 +67,7 @@ export default function LoginPage() {
                             placeholder="your@email.com"
                             size="lg"
                             borderRadius="xl"
+                            px={4}
                         />
                     </Field.Root>
 
@@ -79,6 +80,7 @@ export default function LoginPage() {
                             placeholder="Your password"
                             size="lg"
                             borderRadius="xl"
+                            px={4}
                         />
                     </Field.Root>
 

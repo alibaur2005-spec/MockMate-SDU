@@ -118,22 +118,22 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                     {/* Left Column: Q&A */}
                     <VStack gap={6} align="stretch">
                         <Card.Root variant="elevated">
-                            <Card.Header>
+                            <Card.Header p={5}>
                                 <Heading size="md">Question</Heading>
                                 <Badge colorPalette="blue" mt={2}>{review.question.difficulty}</Badge>
                             </Card.Header>
-                            <Card.Body>
+                            <Card.Body p={5} pt={0}>
                                 <Text>{review.question.content}</Text>
                             </Card.Body>
                         </Card.Root>
 
                         <Card.Root variant="elevated">
-                            <Card.Header>
-                                <Heading size="md">Your Solution</Heading>
+                            <Card.Header p={5}>
+                                <Heading size="md">Interview Transcript / Solution</Heading>
                             </Card.Header>
-                            <Card.Body bg="gray.900" color="green.300" borderRadius="md" fontFamily="monospace">
+                            <Card.Body p={5} pt={0} bg="gray.900" color="green.300" borderRadius="md" fontFamily="monospace">
                                 <Box whiteSpace="pre-wrap" fontSize="sm">
-                                    <span dangerouslySetInnerHTML={{ __html: (review.answer || "// No code submitted").replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>') }} />
+                                    {(review.answer || "// No code submitted").replace(/\*/g, '').replace(/\\n/g, '\n')}
                                 </Box>
                             </Card.Body>
                         </Card.Root>
@@ -142,7 +142,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                     {/* Right Column: AI Feedback */}
                     <VStack gap={6} align="stretch">
                         <Card.Root variant="elevated" borderTop="4px solid" borderColor={evaluation ? (evaluation.score >= 70 ? "green.500" : "orange.500") : "gray.300"}>
-                            <Card.Header>
+                            <Card.Header p={5}>
                                 <HStack justify="space-between">
                                     <HStack>
                                         <FaRobot size={24} color="var(--chakra-colors-blue-500)" />
@@ -155,10 +155,10 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                                     )}
                                 </HStack>
                             </Card.Header>
-                            <Card.Body>
+                            <Card.Body p={5} pt={0}>
                                 {evaluation ? (
                                     <VStack align="start" gap={4}>
-                                        <Text>{evaluation.feedback?.summary || "No summary available."}</Text>
+                                        <Text>{(evaluation.feedback?.summary || "No summary available.").replace(/\*/g, '')}</Text>
 
                                         <Box w="full">
                                             <Heading size="sm" mb={2} color="green.600">Strengths</Heading>
@@ -166,7 +166,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                                                 {(evaluation.feedback?.strengths || []).map((s: string, i: number) => (
                                                     <HStack key={i} align="start">
                                                         <FaCheckCircle color="green" style={{ marginTop: '4px' }} />
-                                                        <Text fontSize="sm">{s}</Text>
+                                                        <Text fontSize="sm">{s.replace(/\*/g, '')}</Text>
                                                     </HStack>
                                                 ))}
                                             </VStack>
@@ -178,7 +178,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                                                 {(evaluation.feedback?.improvements || []).map((s: string, i: number) => (
                                                     <HStack key={i} align="start">
                                                         <FaExclamationTriangle color="orange" style={{ marginTop: '4px' }} />
-                                                        <Text fontSize="sm">{s}</Text>
+                                                        <Text fontSize="sm">{s.replace(/\*/g, '')}</Text>
                                                     </HStack>
                                                 ))}
                                             </VStack>

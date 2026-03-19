@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Box, Button, Container, Heading, Text, VStack, HStack, Image, Badge, Spinner, SimpleGrid, Card } from '@chakra-ui/react';
+import { Box, Button, Container, Heading, Text, VStack, HStack, Image, Badge, Spinner, SimpleGrid, Card, Input } from '@chakra-ui/react';
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState, use } from 'react';
 import { toaster } from '@/components/ui/toaster';
@@ -31,6 +31,12 @@ export default function CompanyDetailsPage({ params }: { params: Promise<{ id: s
     const [company, setCompany] = useState<Company | null>(null);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [newQuestionTopic, setNewQuestionTopic] = useState('');
+    const [newQuestionContent, setNewQuestionContent] = useState('');
+    const [newQuestionDifficulty, setNewQuestionDifficulty] = useState<'Easy'|'Medium'|'Hard'>('Medium');
+    const [isAdding, setIsAdding] = useState(false);
+
     const supabase = createClient();
 
     const fetchData = async () => {
@@ -74,6 +80,39 @@ export default function CompanyDetailsPage({ params }: { params: Promise<{ id: s
     useEffect(() => {
         fetchData();
     }, [id]);
+
+    const handleAddQuestion = async () => {
+        if (!newQuestionContent.trim() || !newQuestionTopic.trim()) {
+            toaster.create({ title: 'Validation Error', description: 'Please fill in all fields', type: 'error' });
+            return;
+        }
+
+        setIsAdding(true);
+        const { data, error } = await supabase
+            .from('questions')
+            .insert({
+                company_id: id,
+                content: newQuestionContent.trim(),
+                topic: newQuestionTopic.trim(),
+                difficulty: newQuestionDifficulty
+            })
+            .select()
+            .single();
+
+        setIsAdding(false);
+
+        if (error) {
+            console.error('Error adding question:', error);
+            toaster.create({ title: 'Error adding question', description: error.message, type: 'error' });
+        } else {
+            setQuestions(prev => [data, ...prev]);
+            setShowAddForm(false);
+            setNewQuestionContent('');
+            setNewQuestionTopic('');
+            setNewQuestionDifficulty('Medium');
+            toaster.create({ title: 'Success', description: 'Question added successfully', type: 'success' });
+        }
+    };
 
     const seedQuestions = async () => {
         if (!company) return;
@@ -218,10 +257,62 @@ export default function CompanyDetailsPage({ params }: { params: Promise<{ id: s
                 <Box>
                     <HStack justify="space-between" mb={6}>
                         <Heading size="xl">Interview Questions</Heading>
-                        {questions.length === 0 && (
-                            <Button size="sm" variant="outline" onClick={seedQuestions}>Seed Questions</Button>
-                        )}
+                        <HStack gap={4}>
+                            <Button px={2} size="sm" variant={showAddForm ? "ghost" : "solid"} colorPalette={showAddForm ? "red" : "brand"} onClick={() => setShowAddForm(!showAddForm)}>
+                                {showAddForm ? 'Cancel' : 'Add Question'}
+                            </Button>
+                            {questions.length === 0 && (
+                                <Button size="sm" variant="outline" onClick={seedQuestions}>Seed Questions</Button>
+                            )}
+                        </HStack>
                     </HStack>
+
+                    {showAddForm && (
+                        <Card.Root variant="outline" mb={8} bg="bg.panel" borderColor="brand.500">
+                            <Card.Body p={6}>
+                                <VStack align="stretch" gap={4}>
+                                    <Heading size="md" mb={2}>Add New Question</Heading>
+                                    
+                                    <HStack gap={4}>
+                                        <Box flex={1}>
+                                            <Text mb={1} fontSize="sm" fontWeight="medium">Topic</Text>
+                                            <Input 
+                                                placeholder="e.g. Data Structures, System Design" 
+                                                value={newQuestionTopic} 
+                                                onChange={(e) => setNewQuestionTopic(e.target.value)} 
+                                            />
+                                        </Box>
+                                        <Box w="150px">
+                                            <Text mb={1} fontSize="sm" fontWeight="medium">Difficulty</Text>
+                                            <select 
+                                                value={newQuestionDifficulty} 
+                                                onChange={(e) => setNewQuestionDifficulty(e.target.value as any)}
+                                                style={{ width: '100%', padding: '9px', borderRadius: '6px', border: '1px solid var(--chakra-colors-border)', background: 'transparent' }}
+                                            >
+                                                <option style={{color: 'black'}} value="Easy">Easy</option>
+                                                <option style={{color: 'black'}} value="Medium">Medium</option>
+                                                <option style={{color: 'black'}} value="Hard">Hard</option>
+                                            </select>
+                                        </Box>
+                                    </HStack>
+
+                                    <Box>
+                                        <Text mb={1} fontSize="sm" fontWeight="medium">Question Content</Text>
+                                        <Input 
+                                            placeholder="Write the actual interview question here..." 
+                                            value={newQuestionContent} 
+                                            onChange={(e) => setNewQuestionContent(e.target.value)} 
+                                        />
+                                    </Box>
+
+                                    <HStack justify="flex-end" pt={2}>
+                                        <Button variant="ghost" onClick={() => setShowAddForm(false)}>Cancel</Button>
+                                        <Button colorPalette="brand" onClick={handleAddQuestion} loading={isAdding}>Save Question</Button>
+                                    </HStack>
+                                </VStack>
+                            </Card.Body>
+                        </Card.Root>
+                    )}
 
                     {questions.length === 0 ? (
                         <Box textAlign="center" py={12} bg="bgSub" borderRadius="xl">

@@ -54,7 +54,7 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
             const transcript = logs
                 .filter(log => log.role === 'user' || log.role === 'ai')
                 .map(log => `${log.role === 'ai' ? 'Interviewer' : 'Candidate'}: ${log.content}`)
-                .join('\\n\\n');
+                .join('\n\n');
 
             const { error: updateError } = await supabase
                 .from('interview_attempts')
@@ -157,7 +157,7 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
                         fontSize={log.role === 'system' ? 'xs' : 'md'}
                         fontStyle={log.role === 'system' ? 'italic' : 'normal'}
                     >
-                        <span dangerouslySetInnerHTML={{ __html: log.content.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>') }} />
+                        <span dangerouslySetInnerHTML={{ __html: log.content.split('**').map((text, idx) => idx % 2 === 1 ? `<strong>${text}</strong>` : text).join('') }} />
                     </Box>
                 ))}
             </Box>

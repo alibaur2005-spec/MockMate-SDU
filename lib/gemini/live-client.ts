@@ -16,6 +16,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
     const audioStreamRef = useRef<MediaStream | null>(null);
     const audioNodeRef = useRef<AudioWorkletNode | null>(null);
     const nextPlayTimeRef = useRef<number>(0);
+    const recognitionRef = useRef<any>(null);
 
     // Audio Playback
     const playPcmAudio = useCallback((base64Data: string) => {
@@ -189,6 +190,11 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
     }, [config, handleServerContent]);
 
     const stopRecording = useCallback(() => {
+        if (recognitionRef.current) {
+            recognitionRef.current.onend = null;
+            try { recognitionRef.current.stop(); } catch(e) {}
+            recognitionRef.current = null;
+        }
         if (audioNodeRef.current) {
             audioNodeRef.current.disconnect();
             audioNodeRef.current = null;
@@ -293,6 +299,38 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
 
             source.connect(workletNode);
             workletNode.connect(audioContextRef.current.destination); // Required to keep worklet alive in some browsers
+
+            // Add client-side speech recognition to log the candidate's answer locally
+            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                const recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = false;
+                // Optional: You can try setting language to the company's presumed language if needed. Defaulting to en-US.
+                recognition.lang = 'en-US';
+
+                recognition.onresult = (event: any) => {
+                    let finalTranscript = '';
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript;
+                        }
+                    }
+                    if (finalTranscript.trim()) {
+                        setLogs(prev => [...prev, { role: 'user', type: 'text', content: finalTranscript.trim() }]);
+                    }
+                };
+
+                recognition.onend = () => {
+                    // Try to restart if we are still meant to be recording
+                    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && audioStreamRef.current) {
+                        try { recognition.start(); } catch(e) {}
+                    }
+                };
+
+                recognitionRef.current = recognition;
+                try { recognition.start(); } catch(e) {}
+            }
 
             setIsRecording(true);
             setLogs(prev => [...prev, { role: 'system', type: 'status', content: 'Microphone on. Listening...' }]);

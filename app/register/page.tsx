@@ -74,6 +74,7 @@ export default function RegisterPage() {
                             placeholder="John Doe"
                             size="lg"
                             borderRadius="xl"
+                            px={4}
                         />
                     </Field.Root>
 
@@ -86,6 +87,7 @@ export default function RegisterPage() {
                             placeholder="your@email.com"
                             size="lg"
                             borderRadius="xl"
+                            px={4}
                         />
                     </Field.Root>
 
@@ -98,6 +100,7 @@ export default function RegisterPage() {
                             placeholder="Create a strong password"
                             size="lg"
                             borderRadius="xl"
+                            px={4}
                         />
                     </Field.Root>
 
