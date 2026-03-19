@@ -51,11 +51,18 @@ export default function CompanyCard({ id, name, description, logo_url, question_
                     </Text>
                 </VStack>
 
-                <Link href={`/companies/${id}`}>
-                    <Button width="100%" colorPalette="brand" variant="outline" size="sm">
-                        View Questions
-                    </Button>
-                </Link>
+                <VStack gap={2} mt={2}>
+                    <Link href={`/interview/live?company_id=${id}`} style={{ width: '100%' }}>
+                        <Button width="100%" colorPalette="purple" variant="solid" size="sm">
+                            Take Mock AI Interview
+                        </Button>
+                    </Link>
+                    <Link href={`/companies/${id}`} style={{ width: '100%' }}>
+                        <Button width="100%" colorPalette="brand" variant="outline" size="sm">
+                            View Questions
+                        </Button>
+                    </Link>
+                </VStack>
             </Box>
         </MotionBox>
     );

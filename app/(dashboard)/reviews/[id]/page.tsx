@@ -132,8 +132,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                                 <Heading size="md">Your Solution</Heading>
                             </Card.Header>
                             <Card.Body bg="gray.900" color="green.300" borderRadius="md" fontFamily="monospace">
-                                <Box as="pre" whiteSpace="pre-wrap" fontSize="sm">
-                                    {review.answer || "// No code submitted"}
+                                <Box whiteSpace="pre-wrap" fontSize="sm">
+                                    <span dangerouslySetInnerHTML={{ __html: (review.answer || "// No code submitted").replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>') }} />
                                 </Box>
                             </Card.Body>
                         </Card.Root>

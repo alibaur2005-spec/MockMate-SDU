@@ -25,7 +25,7 @@ export default function Home() {
                                 <Button variant="ghost" disabled>Loading...</Button>
                             ) : user ? (
                                 <Link href="/dashboard">
-                                    <Button colorPalette="brand" borderRadius="full" fontWeight="bold">Go to Dashboard</Button>
+                                    <Button px={10} colorPalette="brand" borderRadius="full" fontWeight="bold">Go to Dashboard</Button>
                                 </Link>
                             ) : (
                                 <>
@@ -239,7 +239,7 @@ export default function Home() {
                                     transition={{ duration: 0.5, delay: index * 0.1 } as any}
                                 >
                                     <Card.Root h="full" bg={"bg"} border="none" shadow="md">
-                                        <Card.Body gap={4}>
+                                        <Card.Body px={5} py={5} gap={4}>
                                             <Box mb={4}>
                                                 {[1, 2, 3, 4, 5].map((s) => (
                                                     <Icon key={s} as={FaCheckCircle} color="brand.500" mr={1} boxSize={4} />
@@ -288,7 +288,7 @@ export default function Home() {
                                 },
                                 {
                                     q: "How accurate is the AI feedback?",
-                                    a: "Our AI is powered by Gemini 1.5 Flash, providing highly accurate and context-aware feedback on code correctness, efficiency, and style."
+                                    a: "Our AI is powered by Gemini 3.0 Flash, providing highly accurate and context-aware feedback on code correctness, efficiency, and style."
                                 },
                                 {
                                     q: "Can I use this for behavioral interviews?",

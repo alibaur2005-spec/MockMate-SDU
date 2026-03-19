@@ -110,12 +110,12 @@ export default function ReviewsListPage() {
                         <Table.Root size="lg" interactive>
                             <Table.Header>
                                 <Table.Row>
-                                    <Table.ColumnHeader>Company</Table.ColumnHeader>
+                                    <Table.ColumnHeader pl={6}>Company</Table.ColumnHeader>
                                     <Table.ColumnHeader>Question</Table.ColumnHeader>
                                     <Table.ColumnHeader>Date</Table.ColumnHeader>
                                     <Table.ColumnHeader>Score</Table.ColumnHeader>
                                     <Table.ColumnHeader>Status</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Action</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right" pr={6}>Action</Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
@@ -124,7 +124,7 @@ export default function ReviewsListPage() {
 
                                     return (
                                         <Table.Row key={review.id} _hover={{ bg: 'gray.800/50' }}>
-                                            <Table.Cell fontWeight="medium">{review.company?.name || 'Unknown'}</Table.Cell>
+                                            <Table.Cell pl={6} fontWeight="medium">{review.company?.name || 'Unknown'}</Table.Cell>
                                             <Table.Cell py={4}>
                                                 <VStack align="start" gap={2}>
                                                     <Text lineClamp={1} fontWeight="medium">{review.question?.content || 'Unknown'}</Text>
@@ -148,7 +148,7 @@ export default function ReviewsListPage() {
                                                     {review.status}
                                                 </Badge>
                                             </Table.Cell>
-                                            <Table.Cell textAlign="right">
+                                            <Table.Cell textAlign="right" pr={6}>
                                                 <IconButton
                                                     aria-label="View Review"
                                                     variant="ghost"

@@ -204,6 +204,11 @@ export default function CompanyDetailsPage({ params }: { params: Promise<{ id: s
                             <Text color="fg.muted" fontSize="lg">{company.description}</Text>
                             <HStack>
                                 <Badge style={{ padding: '0 10px' }} colorPalette="purple" variant="solid" size="lg">{questions.length} Questions Available</Badge>
+                                <Link href={`/interview/live?company_id=${company.id}`}>
+                                    <Button colorPalette="purple" variant="solid" size="sm" ml={4}>
+                                        <FaPlay style={{ marginRight: '8px' }} /> Start Live AI Interview
+                                    </Button>
+                                </Link>
                             </HStack>
                         </VStack>
                     </HStack>

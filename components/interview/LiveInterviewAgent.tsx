@@ -5,10 +5,13 @@ import { Box, Button, VStack, HStack, Text, Heading, Badge, IconButton, Icon } f
 import { FaMicrophone, FaMicrophoneSlash, FaPlay, FaStop } from 'react-icons/fa';
 import { useGeminiLiveClient } from '@/lib/gemini/live-client';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { toaster } from '@/components/ui/toaster';
 
 const MotionBox = motion(Box);
 
-export function LiveInterviewAgent({ companyName, role, questionPrompt }: { companyName?: string, role?: string, questionPrompt?: string }) {
+export function LiveInterviewAgent({ attemptId, companyName, role, questionPrompt }: { attemptId?: string, companyName?: string, role?: string, questionPrompt?: string }) {
     const systemPrompt = `You are an expert technical interviewer at ${companyName || 'a top tech company'}. You are interviewing a candidate for a ${role || 'Software Engineer'} role. ${questionPrompt ? `Start by asking this question: ${questionPrompt}` : 'Start by asking a classic algorithm or system design question.'} Speak clearly and wait for the candidate's audio response. Be critical but constructive. Speak with a natural, conversational tone.`;
 
     const {
@@ -23,7 +26,10 @@ export function LiveInterviewAgent({ companyName, role, questionPrompt }: { comp
     } = useGeminiLiveClient({ systemInstruction: systemPrompt });
 
     const [isClient, setIsClient] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const router = useRouter();
+    const supabase = createClient();
 
     useEffect(() => {
         setIsClient(true);
@@ -34,6 +40,80 @@ export function LiveInterviewAgent({ companyName, role, questionPrompt }: { comp
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [logs]);
+
+    const handleEndInterview = async () => {
+        disconnect();
+        
+        if (!attemptId || logs.length === 0) {
+            router.push('/dashboard');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const transcript = logs
+                .filter(log => log.role === 'user' || log.role === 'ai')
+                .map(log => `${log.role === 'ai' ? 'Interviewer' : 'Candidate'}: ${log.content}`)
+                .join('\\n\\n');
+
+            const { error: updateError } = await supabase
+                .from('interview_attempts')
+                .update({ 
+                    status: 'completed', 
+                    ended_at: new Date().toISOString(),
+                    answer: transcript || 'No answer provided'
+                })
+                .eq('id', attemptId);
+
+            if (updateError) throw updateError;
+
+            // Trigger Evaluation API
+            toaster.create({
+                title: 'Interview Completed',
+                description: 'Generating AI feedback...',
+                type: 'info',
+            });
+
+            const evaluateRes = await fetch('/api/evaluate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    attemptId, 
+                    answer: transcript || 'No answer provided',
+                    question: { content: questionPrompt || 'General Interview', topic: 'General', difficulty: 'Medium' }, // Provide mock or real question
+                    company: companyName || 'Unknown Company'
+                })
+            });
+
+            if (!evaluateRes.ok) {
+                throw new Error('Failed to generate AI evaluation');
+            }
+
+            const aiResult = await evaluateRes.json();
+
+            const { error: evalError } = await supabase
+                .from('evaluations')
+                .insert({
+                    attempt_id: attemptId,
+                    score: aiResult.score || 0,
+                    feedback: aiResult.feedback || {},
+                    ai_model: 'gemini-1.5-flash',
+                    review_text: aiResult.feedback?.summary || "No summary provided."
+                });
+
+            if (evalError) throw evalError;
+
+            router.push(`/reviews/${attemptId}`);
+        } catch (error: any) {
+            console.error('Error ending interview:', error);
+            toaster.create({
+                title: 'Error saving transcript',
+                description: error.message,
+                type: 'error',
+            });
+            setIsSubmitting(false);
+        }
+    };
 
     if (!isClient) return null;
 
@@ -77,18 +157,18 @@ export function LiveInterviewAgent({ companyName, role, questionPrompt }: { comp
                         fontSize={log.role === 'system' ? 'xs' : 'md'}
                         fontStyle={log.role === 'system' ? 'italic' : 'normal'}
                     >
-                        {log.content}
+                        <span dangerouslySetInnerHTML={{ __html: log.content.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>') }} />
                     </Box>
                 ))}
             </Box>
 
             <HStack justify="center" gap={8} pt={4}>
-                {!isConnected ? (
+                {!isConnected && !isSubmitting ? (
                     <Button colorPalette="brand" size="lg" onClick={connect}>
                         <Icon as={FaPlay} mr={2} /> Connect & Start
                     </Button>
                 ) : (
-                    <Button colorPalette="red" size="lg" onClick={disconnect}>
+                    <Button colorPalette="red" size="lg" onClick={handleEndInterview} loading={isSubmitting}>
                         <Icon as={FaStop} mr={2} /> End Interview
                     </Button>
                 )}
