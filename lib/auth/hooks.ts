@@ -35,3 +35,33 @@ export function useAuth() {
 
     return { user, loading };
 }
+
+export function useAdmin() {
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        const supabase = createClient();
+        const check = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data } = await supabase
+                        .from('profiles')
+                        .select('role')
+                        .eq('id', user.id)
+                        .single();
+                    setIsAdmin(data?.role === 'admin');
+                }
+            } catch {
+                setIsAdmin(false);
+            } finally {
+                setLoading(false);
+            }
+        };
+        check();
+    }, []);
+
+    return { isAdmin, loading };
+}

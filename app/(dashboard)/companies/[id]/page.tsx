@@ -7,6 +7,7 @@ import { toaster } from '@/components/ui/toaster';
 import { FaPlay } from 'react-icons/fa';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAdmin } from '@/lib/auth/hooks';
 
 interface Company { id: string; name: string; description: string; logo_url: string; }
 interface Question { id: string; content: string; topic: string; difficulty: 'Easy' | 'Medium' | 'Hard'; }
@@ -14,6 +15,7 @@ interface Question { id: string; content: string; topic: string; difficulty: 'Ea
 export default function CompanyDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const router = useRouter();
+    const { isAdmin } = useAdmin();
     const [company, setCompany] = useState<Company | null>(null);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [loading, setLoading] = useState(true);
@@ -97,15 +99,17 @@ export default function CompanyDetailsPage({ params }: { params: Promise<{ id: s
             <Box>
                 <HStack justify="space-between" mb={5}>
                     <Heading size="lg" fontWeight="700">Interview Questions</Heading>
-                    <HStack gap={3}>
-                        <Button size="sm" variant={showAddForm ? 'ghost' : 'solid'} onClick={() => setShowAddForm(!showAddForm)} borderRadius="lg" fontWeight="600"
-                            {...(showAddForm ? { color: '#ef4444', _hover: { bg: 'rgba(239,68,68,0.08)' } } : { bg: 'white', color: '#08080c', _hover: { bg: 'gray.200' } })}
-                        >{showAddForm ? 'Cancel' : 'Add Question'}</Button>
-                        {questions.length === 0 && <Button size="sm" variant="outline" onClick={seedQuestions} borderColor="rgba(255,255,255,0.08)" color="gray.400" borderRadius="lg">Seed Questions</Button>}
-                    </HStack>
+                    {isAdmin && (
+                        <HStack gap={3}>
+                            <Button size="sm" variant={showAddForm ? 'ghost' : 'solid'} onClick={() => setShowAddForm(!showAddForm)} borderRadius="lg" fontWeight="600"
+                                {...(showAddForm ? { color: '#ef4444', _hover: { bg: 'rgba(239,68,68,0.08)' } } : { bg: 'white', color: '#08080c', _hover: { bg: 'gray.200' } })}
+                            >{showAddForm ? 'Cancel' : 'Add Question'}</Button>
+                            {questions.length === 0 && <Button size="sm" variant="outline" onClick={seedQuestions} borderColor="rgba(255,255,255,0.08)" color="gray.400" borderRadius="lg">Seed Questions</Button>}
+                        </HStack>
+                    )}
                 </HStack>
 
-                {showAddForm && (
+                {isAdmin && showAddForm && (
                     <Box mb={6} p={6} borderRadius="xl" style={{ background: 'rgba(86,114,234,0.06)', border: '1px solid rgba(86,114,234,0.15)' }}>
                         <VStack align="stretch" gap={4}>
                             <Heading size="sm" fontWeight="700">Add New Question</Heading>
