@@ -153,7 +153,7 @@ export default function CompanyDetailsPage({ params }: { params: Promise<{ id: s
     const diffColor = (d: string) => d === 'Easy' ? '34,197,94' : d === 'Medium' ? '234,179,8' : '239,68,68';
 
     if (loading) return <VStack py={20}><Spinner size="xl" color="gray.500" /></VStack>;
-    if (!company) return <VStack py={20}><Heading color="gray.400">Company not found</Heading><Link href="/companies"><Button mt={4} variant="outline" borderColor="rgba(255,255,255,0.1)" color="gray.400">Back</Button></Link></VStack>;
+    if (!company) return <VStack py={20}><Heading color="gray.400">Company not found</Heading><Link href="/companies"><Button mt={4} variant="outline" borderColor="rgba(255,255,255,0.1)" color="gray.400" px={5}>Back</Button></Link></VStack>;
 
     return (
         <VStack gap={8} align="stretch">
@@ -187,8 +187,8 @@ export default function CompanyDetailsPage({ params }: { params: Promise<{ id: s
                         <Box><Text mb={1} fontSize="xs" fontWeight="500" color="gray.400">Name</Text><Input value={editName} onChange={(e) => setEditName(e.target.value)} borderRadius="lg" {...inputStyle} /></Box>
                         <Box><Text mb={1} fontSize="xs" fontWeight="500" color="gray.400">Description</Text><Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} borderRadius="lg" {...inputStyle} /></Box>
                         <HStack justify="flex-end" gap={3}>
-                            <Button variant="ghost" onClick={cancelEditing} color="gray.500" size="sm"><FaTimes style={{ marginRight: '4px' }} /> Cancel</Button>
-                            <Button onClick={handleSaveEdit} loading={isSavingEdit} bg="white" color="#08080c" borderRadius="lg" fontWeight="600" _hover={{ bg: 'gray.200' }} size="sm"><FaCheck style={{ marginRight: '4px' }} /> Save</Button>
+                            <Button variant="ghost" onClick={cancelEditing} color="gray.500" size="sm" px={4}><FaTimes style={{ marginRight: '4px' }} /> Cancel</Button>
+                            <Button onClick={handleSaveEdit} loading={isSavingEdit} bg="white" color="#08080c" borderRadius="lg" fontWeight="600" px={5} _hover={{ bg: 'gray.200' }} size="sm"><FaCheck style={{ marginRight: '4px' }} /> Save</Button>
                         </HStack>
                     </VStack>
                 </Box>
@@ -213,7 +213,7 @@ export default function CompanyDetailsPage({ params }: { params: Promise<{ id: s
                             <HStack flexWrap="wrap" gap={3}>
                                 <Badge px={3} py={0.5} borderRadius="full" fontSize="xs" style={{ background: 'rgba(168,85,247,0.12)', color: '#c084fc', border: '1px solid rgba(168,85,247,0.2)' }}>{questions.length} Questions</Badge>
                                 <Link href={`/interview/live?company_id=${company.id}`}>
-                                    <Button size="sm" bg="white" color="#08080c" borderRadius="lg" fontWeight="600" _hover={{ bg: 'gray.200' }}><FaPlay style={{ marginRight: '6px' }} /> Live AI Interview</Button>
+                                    <Button size="sm" bg="white" color="#08080c" borderRadius="lg" fontWeight="600" px={5} _hover={{ bg: 'gray.200' }}><FaPlay style={{ marginRight: '6px' }} /> Live AI Interview</Button>
                                 </Link>
                             </HStack>
                         </VStack>
@@ -230,7 +230,7 @@ export default function CompanyDetailsPage({ params }: { params: Promise<{ id: s
                             <Button size="sm" onClick={() => setShowAddForm(!showAddForm)} borderRadius="lg" fontWeight="600"
                                 {...(showAddForm ? { variant: 'ghost', color: '#ef4444', _hover: { bg: 'rgba(239,68,68,0.08)' } } : { bg: 'white', color: '#08080c', _hover: { bg: 'gray.200' } })}
                             >{showAddForm ? 'Cancel' : 'Add Question'}</Button>
-                            {questions.length === 0 && <Button size="sm" variant="outline" onClick={seedQuestions} borderColor="rgba(255,255,255,0.08)" color="gray.400" borderRadius="lg">Seed Questions</Button>}
+                            {questions.length === 0 && <Button size="sm" variant="outline" onClick={seedQuestions} borderColor="rgba(255,255,255,0.08)" color="gray.400" borderRadius="lg" px={4}>Seed Questions</Button>}
                         </HStack>
                     )}
                 </HStack>
@@ -251,7 +251,7 @@ export default function CompanyDetailsPage({ params }: { params: Promise<{ id: s
                                 </Box>
                             </HStack>
                             <Box><Text mb={1} fontSize="xs" fontWeight="500" color="gray.400">Question</Text><Input placeholder="Write the question..." value={newQuestionContent} onChange={(e) => setNewQuestionContent(e.target.value)} borderRadius="lg" {...inputStyle} /></Box>
-                            <HStack justify="flex-end"><Button variant="ghost" onClick={() => setShowAddForm(false)} color="gray.500">Cancel</Button><Button onClick={handleAddQuestion} loading={isAdding} bg="white" color="#08080c" borderRadius="lg" fontWeight="600" _hover={{ bg: 'gray.200' }}>Save</Button></HStack>
+                            <HStack justify="flex-end"><Button variant="ghost" onClick={() => setShowAddForm(false)} color="gray.500" px={4}>Cancel</Button><Button onClick={handleAddQuestion} loading={isAdding} bg="white" color="#08080c" borderRadius="lg" fontWeight="600" px={6} _hover={{ bg: 'gray.200' }}>Save</Button></HStack>
                         </VStack>
                     </Box>
                 )}

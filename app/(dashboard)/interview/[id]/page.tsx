@@ -82,7 +82,7 @@ export default function InterviewPage({ params }: { params: Promise<{ id: string
     };
 
     if (loading) return <VStack py={20}><Spinner size="xl" color="gray.500" /><Text mt={4} color="gray.500">Loading interview...</Text></VStack>;
-    if (!attempt) return <VStack py={20}><Heading color="gray.400">Interview not found</Heading><Button mt={4} onClick={() => router.push('/companies')} variant="outline" borderColor="rgba(255,255,255,0.08)" color="gray.400">Back</Button></VStack>;
+    if (!attempt) return <VStack py={20}><Heading color="gray.400">Interview not found</Heading><Button mt={4} onClick={() => router.push('/companies')} variant="outline" borderColor="rgba(255,255,255,0.08)" color="gray.400" px={5}>Back</Button></VStack>;
 
     const diffColor = attempt.question.difficulty === 'Easy' ? '34,197,94' : attempt.question.difficulty === 'Medium' ? '234,179,8' : '239,68,68';
 
@@ -137,8 +137,8 @@ export default function InterviewPage({ params }: { params: Promise<{ id: string
                         {isRecording ? <><FaStop style={{ marginRight: '6px' }} /> Stop</> : <><FaMicrophone style={{ marginRight: '6px' }} /> Record</>}
                     </Button>
                     <HStack>
-                        <Button variant="ghost" onClick={() => router.back()} color="gray.500" size="sm">Cancel</Button>
-                        <Button size="sm" onClick={handleSubmit} loading={submitting} disabled={isRecording || isTranscribing} bg="white" color="#08080c" borderRadius="lg" fontWeight="700" _hover={{ bg: 'gray.200' }}>
+                        <Button variant="ghost" onClick={() => router.back()} color="gray.500" size="sm" px={4}>Cancel</Button>
+                        <Button size="sm" onClick={handleSubmit} loading={submitting} disabled={isRecording || isTranscribing} bg="white" color="#08080c" borderRadius="lg" fontWeight="700" px={5} _hover={{ bg: 'gray.200' }}>
                             <FaCheckCircle style={{ marginRight: '6px' }} /> Submit
                         </Button>
                     </HStack>

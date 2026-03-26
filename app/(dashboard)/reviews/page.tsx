@@ -41,7 +41,7 @@ export default function ReviewsListPage() {
                 <VStack py={16} borderRadius="xl" gap={4} textAlign="center" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}>
                     <Heading size="md" fontWeight="700" color="gray.300">No interviews yet</Heading>
                     <Text color="gray.500" fontSize="sm">Start practicing to see your results here.</Text>
-                    <Button onClick={() => router.push('/companies')} bg="white" color="#08080c" borderRadius="lg" fontWeight="600" _hover={{ bg: 'gray.200' }}>Start Practice <FaArrowRight style={{ marginLeft: '6px' }} /></Button>
+                    <Button onClick={() => router.push('/companies')} bg="white" color="#08080c" borderRadius="lg" fontWeight="600" px={6} _hover={{ bg: 'gray.200' }}>Start Practice <FaArrowRight style={{ marginLeft: '6px' }} /></Button>
                 </VStack>
             ) : (
                 <Box overflowX="auto" borderRadius="xl" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>

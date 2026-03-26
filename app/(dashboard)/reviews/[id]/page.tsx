@@ -28,7 +28,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     }, [id]);
 
     if (loading) return <VStack py={20}><Spinner size="xl" color="gray.500" /><Text mt={4} color="gray.500">Loading evaluation...</Text></VStack>;
-    if (!review) return <VStack py={20}><Heading color="gray.400">Review not found</Heading><Button mt={4} onClick={() => router.push('/dashboard')} variant="outline" borderColor="rgba(255,255,255,0.08)" color="gray.400">Dashboard</Button></VStack>;
+    if (!review) return <VStack py={20}><Heading color="gray.400">Review not found</Heading><Button mt={4} onClick={() => router.push('/dashboard')} variant="outline" borderColor="rgba(255,255,255,0.08)" color="gray.400" px={5}>Dashboard</Button></VStack>;
 
     const evaluation = review.evaluations?.length > 0 ? review.evaluations[0] : null;
     const diffColor = review.question.difficulty === 'Easy' ? '34,197,94' : review.question.difficulty === 'Medium' ? '234,179,8' : '239,68,68';
@@ -36,7 +36,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     return (
         <VStack gap={8} align="stretch">
             <Box>
-                <Button variant="ghost" size="sm" color="gray.500" onClick={() => router.push('/reviews')} mb={3} _hover={{ color: 'white' }}><FaArrowLeft style={{ marginRight: '6px' }} /> Back to Reviews</Button>
+                <Button variant="ghost" size="sm" color="gray.500" onClick={() => router.push('/reviews')} mb={3} px={4} _hover={{ color: 'white' }}><FaArrowLeft style={{ marginRight: '6px' }} /> Back to Reviews</Button>
                 <Heading size="2xl" fontWeight="800" letterSpacing="-0.03em">Interview Result</Heading>
                 <Text color="gray.500" fontSize="sm" mt={1}>{review.company.name} — {review.question.topic}</Text>
             </Box>

@@ -122,8 +122,8 @@ export default function TranscriberPage() {
                                 <Button size="sm" variant="outline" onClick={startRecording} disabled={uploading} borderColor="rgba(255,255,255,0.08)" color="gray.400" borderRadius="lg" px={6} _hover={{ bg: 'rgba(255,255,255,0.04)' }}><FaMicrophone style={{ marginRight: '6px' }} /> HQ Recording</Button>
                             </>
                         )}
-                        {isListening && <Button size="sm" onClick={stopListening} bg="#5672ea" color="white" borderRadius="lg" _hover={{ bg: '#3f54de' }}><FaStop style={{ marginRight: '6px' }} /> Stop ({formatTime(recordingTime)})</Button>}
-                        {isRecording && <Button size="sm" onClick={stopRecording} bg="#ef4444" color="white" borderRadius="lg" _hover={{ bg: '#dc2626' }}><FaStop style={{ marginRight: '6px' }} /> Stop ({formatTime(recordingTime)})</Button>}
+                        {isListening && <Button size="sm" onClick={stopListening} bg="#5672ea" color="white" borderRadius="lg" px={5} _hover={{ bg: '#3f54de' }}><FaStop style={{ marginRight: '6px' }} /> Stop ({formatTime(recordingTime)})</Button>}
+                        {isRecording && <Button size="sm" onClick={stopRecording} bg="#ef4444" color="white" borderRadius="lg" px={5} _hover={{ bg: '#dc2626' }}><FaStop style={{ marginRight: '6px' }} /> Stop ({formatTime(recordingTime)})</Button>}
                     </HStack>
                     {isListening && liveTranscript && (
                         <Box w="full" p={4} borderRadius="lg" mt={2} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -172,7 +172,7 @@ export default function TranscriberPage() {
                     <Dialog.Content borderRadius="xl" maxW="lg" p={0} style={{ background: '#0d0d14', border: '1px solid rgba(255,255,255,0.08)' }}>
                         <Dialog.Header p={5} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}><Dialog.Title fontSize="md" fontWeight="700">{selectedTranscription?.file_name}</Dialog.Title></Dialog.Header>
                         <Dialog.Body p={5}><Box maxHeight="60vh" overflowY="auto" whiteSpace="pre-wrap" p={4} borderRadius="lg" style={{ background: 'rgba(255,255,255,0.03)' }} color="gray.300" fontSize="sm" lineHeight="1.8"><Text>{selectedTranscription?.transcription_text}</Text></Box></Dialog.Body>
-                        <Dialog.Footer p={5} style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}><Button variant="outline" onClick={() => setIsModalOpen(false)} borderColor="rgba(255,255,255,0.08)" color="gray.400" borderRadius="lg" _hover={{ bg: 'rgba(255,255,255,0.04)' }}>Close</Button></Dialog.Footer>
+                        <Dialog.Footer p={5} style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}><Button variant="outline" onClick={() => setIsModalOpen(false)} borderColor="rgba(255,255,255,0.08)" color="gray.400" borderRadius="lg" px={5} _hover={{ bg: 'rgba(255,255,255,0.04)' }}>Close</Button></Dialog.Footer>
                         <Dialog.CloseTrigger top="2" right="2" color="gray.500" />
                     </Dialog.Content>
                 </Dialog.Positioner>

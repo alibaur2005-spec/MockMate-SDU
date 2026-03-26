@@ -90,7 +90,7 @@ export default function ProfilePage() {
                             <Field.Label fontSize="sm" color="gray.400" fontWeight="500">Full Name</Field.Label>
                             <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" px={4} borderRadius="lg" {...inputStyle} />
                         </Field.Root>
-                        <Button type="submit" loading={saving} bg="white" color="#08080c" borderRadius="lg" fontWeight="700" _hover={{ bg: 'gray.200' }} alignSelf="flex-start">Save Changes</Button>
+                        <Button type="submit" loading={saving} bg="white" color="#08080c" borderRadius="lg" fontWeight="700" px={6} _hover={{ bg: 'gray.200' }} alignSelf="flex-start">Save Changes</Button>
                     </VStack>
                 </Box>
             </Box>

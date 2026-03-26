@@ -79,6 +79,7 @@ export default function LoginPage() {
                         loading={loading}
                         borderRadius="xl"
                         fontWeight="700"
+                        px={6}
                         bg="white"
                         color="#08080c"
                         _hover={{ bg: 'gray.200' }}

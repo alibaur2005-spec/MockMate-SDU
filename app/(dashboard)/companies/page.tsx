@@ -139,8 +139,8 @@ export default function CompaniesPage() {
                             <Input placeholder="Short description of the company..." value={newDescription} onChange={(e) => setNewDescription(e.target.value)} borderRadius="lg" {...inputStyle} />
                         </Box>
                         <HStack justify="flex-end">
-                            <Button variant="ghost" onClick={resetForm} color="gray.500">Cancel</Button>
-                            <Button onClick={handleAddCompany} loading={isAdding} bg="white" color="#08080c" borderRadius="lg" fontWeight="600" _hover={{ bg: 'gray.200' }}>Save Company</Button>
+                            <Button variant="ghost" onClick={resetForm} color="gray.500" px={4}>Cancel</Button>
+                            <Button onClick={handleAddCompany} loading={isAdding} bg="white" color="#08080c" borderRadius="lg" fontWeight="600" px={6} _hover={{ bg: 'gray.200' }}>Save Company</Button>
                         </HStack>
                     </VStack>
                 </Box>

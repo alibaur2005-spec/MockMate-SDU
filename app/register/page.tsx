@@ -63,7 +63,7 @@ export default function RegisterPage() {
                         <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Create a strong password" size="lg" borderRadius="xl" px={4} {...inputStyle} />
                     </Field.Root>
 
-                    <Button type="submit" size="lg" width="100%" loading={loading} borderRadius="xl" fontWeight="700" bg="white" color="#08080c" _hover={{ bg: 'gray.200' }}>
+                    <Button type="submit" size="lg" width="100%" loading={loading} borderRadius="xl" fontWeight="700" px={6} bg="white" color="#08080c" _hover={{ bg: 'gray.200' }}>
                         Sign Up
                     </Button>
 
