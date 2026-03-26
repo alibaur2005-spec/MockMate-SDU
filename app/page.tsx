@@ -1,9 +1,10 @@
 'use client';
 
-import { Box, Button, Container, Flex, Heading, Text, SimpleGrid, Icon, VStack, HStack, Accordion, Separator, Avatar } from '@chakra-ui/react';
+import { Box, Button, Container, Flex, Heading, Text, SimpleGrid, Icon, VStack, HStack, Separator, Avatar } from '@chakra-ui/react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { FaRobot, FaChartLine, FaArrowRight, FaTwitter, FaGithub, FaLinkedin, FaMicrophone, FaStar } from 'react-icons/fa';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaRobot, FaChartLine, FaArrowRight, FaTwitter, FaGithub, FaLinkedin, FaMicrophone, FaStar, FaPlus } from 'react-icons/fa';
 import { useAuth } from '@/lib/auth/hooks';
 
 const MotionBox = motion(Box);
@@ -560,32 +561,16 @@ export default function Home() {
                             </MotionBox>
                         </VStack>
 
-                        <Accordion.Root collapsible variant="enclosed" w="full">
+                        <VStack w="full" gap={3}>
                             {[
                                 { q: 'Is MockMate free to use?', a: 'Yes! You can access a wide range of questions and AI feedback for free. Premium features with advanced analytics are also available.' },
                                 { q: 'What programming languages are supported?', a: 'We support JavaScript, Python, Java, C++, and TypeScript. More languages are constantly being added.' },
                                 { q: 'How accurate is the AI feedback?', a: "Our AI is powered by Google's Gemini, providing highly accurate and context-aware feedback on code correctness, efficiency, and style." },
                                 { q: 'Can I practice behavioral interviews?', a: 'Absolutely! Our live voice interview and transcriber tools let you practice and get feedback on behavioral questions too.' },
                             ].map((item, i) => (
-                                <Accordion.Item
-                                    key={i}
-                                    value={item.q}
-                                    mb={3}
-                                    border="none"
-                                    borderRadius="xl"
-                                    style={{ background: 'rgba(255,255,255,0.03)' }}
-                                >
-                                    <Accordion.ItemTrigger p={5} cursor="pointer" _hover={{ color: 'white' }}>
-                                        <Box flex="1" textAlign="left" fontWeight="600" fontSize="sm" color="gray.200">
-                                            {item.q}
-                                        </Box>
-                                    </Accordion.ItemTrigger>
-                                    <Accordion.ItemContent px={5} pb={5} color="gray.400" fontSize="sm" lineHeight="1.7">
-                                        {item.a}
-                                    </Accordion.ItemContent>
-                                </Accordion.Item>
+                                <FAQItem key={i} q={item.q} a={item.a} />
                             ))}
-                        </Accordion.Root>
+                        </VStack>
                     </VStack>
                 </Container>
             </Box>
@@ -721,6 +706,44 @@ export default function Home() {
                     </Flex>
                 </Container>
             </Box>
+        </Box>
+    );
+}
+
+const MotionDiv = motion.div;
+
+function FAQItem({ q, a }: { q: string; a: string }) {
+    const [open, setOpen] = useState(false);
+    return (
+        <Box w="full" borderRadius="xl" overflow="hidden" style={{ background: 'rgba(255,255,255,0.03)' }}>
+            <HStack
+                as="button"
+                w="full"
+                p={5}
+                cursor="pointer"
+                onClick={() => setOpen(!open)}
+                justify="space-between"
+                _hover={{ bg: 'rgba(255,255,255,0.02)' }}
+                transition="background 0.15s"
+            >
+                <Text flex="1" textAlign="left" fontWeight="600" fontSize="sm" color="gray.200">{q}</Text>
+                <MotionDiv animate={{ rotate: open ? 45 : 0 }} transition={{ duration: 0.2 }} style={{ flexShrink: 0, marginLeft: '12px' }}>
+                    <FaPlus color="rgba(255,255,255,0.25)" size={11} />
+                </MotionDiv>
+            </HStack>
+            <AnimatePresence initial={false}>
+                {open && (
+                    <MotionDiv
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ height: { duration: 0.3, ease: [0.4, 0, 0.2, 1] }, opacity: { duration: 0.2 } }}
+                        style={{ overflow: 'hidden' }}
+                    >
+                        <Box px={5} pb={5} color="gray.400" fontSize="sm" lineHeight="1.7">{a}</Box>
+                    </MotionDiv>
+                )}
+            </AnimatePresence>
         </Box>
     );
 }

@@ -107,6 +107,19 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
         const resizeObserver = new ResizeObserver(resizeCanvas);
         if (canvas.parentElement) resizeObserver.observe(canvas.parentElement);
 
+        // Pre-allocate particles
+        const particles = Array.from({ length: 40 }, () => ({
+            angle: Math.random() * Math.PI * 2,
+            distance: 1.5 + Math.random() * 0.7,
+            speed: 0.0015 + Math.random() * 0.003,
+            size: 0.6 + Math.random() * 1.8,
+            phase: Math.random() * Math.PI * 2,
+        }));
+
+        // Sound wave ring pool
+        const waves: Array<{ radius: number; opacity: number }> = [];
+        let lastWaveTime = 0;
+
         const animate = () => {
             const w = canvas.width / dpr;
             const h = canvas.height / dpr;
@@ -116,76 +129,130 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
 
             // Audio data
             const analyser = getAnalyserNode();
-            const bufferLength = analyser?.frequencyBinCount || 128;
-            const dataArray = new Uint8Array(bufferLength);
-            if (analyser) {
-                analyser.getByteFrequencyData(dataArray);
-            }
+            const bufLen = analyser?.frequencyBinCount || 128;
+            const dataArray = new Uint8Array(bufLen);
+            if (analyser) analyser.getByteFrequencyData(dataArray);
 
             const avgLevel = analyser
-                ? dataArray.reduce((sum, v) => sum + v, 0) / bufferLength / 255
+                ? dataArray.reduce((sum, v) => sum + v, 0) / bufLen / 255
                 : 0;
 
-            // Smooth the level for fluid motion
             smoothLevelRef.current += (avgLevel - smoothLevelRef.current) * 0.12;
             const level = smoothLevelRef.current;
 
             const cx = w / 2;
             const cy = h / 2;
-            const baseR = Math.min(w, h) * 0.17;
-            timeRef.current += 0.015;
+            const baseR = Math.min(w, h) * 0.15;
+            timeRef.current += 0.012;
             const t = timeRef.current;
 
-            // --- Outer glow rings ---
+            // ── Layer 1: Ambient background glow ──
+            const ambGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, baseR * 3.5);
+            ambGrad.addColorStop(0, `rgba(86,114,234,${0.04 + level * 0.06})`);
+            ambGrad.addColorStop(0.5, `rgba(26,177,181,${0.015 + level * 0.025})`);
+            ambGrad.addColorStop(1, 'transparent');
+            ctx.fillStyle = ambGrad;
+            ctx.fillRect(0, 0, w, h);
+
+            // ── Layer 2: Sound wave rings ──
+            const now = Date.now();
+            if (level > 0.1 && now - lastWaveTime > 380) {
+                waves.push({ radius: baseR * 1.15, opacity: 0.18 + level * 0.25 });
+                lastWaveTime = now;
+            }
+            for (let i = waves.length - 1; i >= 0; i--) {
+                waves[i].radius += 1.2 + level * 0.6;
+                waves[i].opacity -= 0.003;
+                if (waves[i].opacity <= 0) { waves.splice(i, 1); continue; }
+                ctx.beginPath();
+                ctx.arc(cx, cy, waves[i].radius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(86,114,234,${waves[i].opacity})`;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            // ── Layer 3: Outer glow halos ──
             for (let i = 5; i >= 0; i--) {
                 const breathe = Math.sin(t * 0.8 + i * 0.6) * 0.03;
-                const r = baseR * (1.4 + i * 0.28 + level * (i + 1) * 0.35 + breathe);
-                const alpha = Math.max(0, 0.035 + level * 0.1 - i * 0.012);
-
+                const r = baseR * (1.3 + i * 0.22 + level * (i + 1) * 0.28 + breathe);
+                const alpha = Math.max(0, 0.025 + level * 0.08 - i * 0.008);
                 ctx.beginPath();
                 ctx.arc(cx, cy, r, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(86, 114, 234, ${alpha})`;
+                ctx.fillStyle = `rgba(86,114,234,${alpha})`;
                 ctx.fill();
             }
 
-            // --- Main blob with frequency distortion ---
+            // ── Layer 4: Orbiting particles ──
+            particles.forEach(p => {
+                p.angle += p.speed * (1 + level * 3);
+                const wobble = Math.sin(t * 1.5 + p.phase) * 0.06;
+                const dist = baseR * (p.distance + wobble + level * 0.25);
+                const x = cx + Math.cos(p.angle) * dist;
+                const y = cy + Math.sin(p.angle) * dist;
+                const sz = p.size * (1 + level * 0.8);
+                const al = 0.1 + level * 0.35 + Math.sin(t * 0.8 + p.phase) * 0.05;
+                ctx.beginPath();
+                ctx.arc(x, y, Math.max(0.4, sz), 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(120,160,255,${Math.max(0.04, al)})`;
+                ctx.fill();
+            });
+
+            // ── Layer 5: Frequency ring ──
+            if (level > 0.04) {
+                const fSeg = 72;
+                const fR = baseR * 1.15;
+                ctx.beginPath();
+                for (let i = 0; i <= fSeg; i++) {
+                    const angle = (i / fSeg) * Math.PI * 2;
+                    const di = Math.floor((i % fSeg) / fSeg * bufLen);
+                    const amp = dataArray[di] / 255;
+                    const r = fR + amp * baseR * 0.3;
+                    const x = cx + Math.cos(angle) * r;
+                    const y = cy + Math.sin(angle) * r;
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.strokeStyle = `rgba(86,114,234,${0.1 + level * 0.25})`;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
+
+            // ── Layer 6: Core blob ──
             const segments = 128;
             ctx.beginPath();
             for (let i = 0; i <= segments; i++) {
                 const angle = (i / segments) * Math.PI * 2;
-                const di = Math.floor((i % segments) / segments * bufferLength);
+                const di = Math.floor((i % segments) / segments * bufLen);
                 const freqAmp = dataArray[di] / 255;
                 const wave =
-                    Math.sin(angle * 3 + t * 2) * 0.035 +
-                    Math.sin(angle * 5 - t * 1.4) * 0.02 +
-                    Math.sin(angle * 2 + t * 0.7) * 0.015;
-                const r = baseR * (1 + freqAmp * 0.22 + wave + level * 0.12);
-
+                    Math.sin(angle * 3 + t * 2) * 0.03 +
+                    Math.sin(angle * 5 - t * 1.3) * 0.018 +
+                    Math.sin(angle * 2 + t * 0.7) * 0.012;
+                const r = baseR * (1 + freqAmp * 0.2 + wave + level * 0.1);
                 const x = cx + Math.cos(angle) * r;
                 const y = cy + Math.sin(angle) * r;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
             }
             ctx.closePath();
 
-            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, baseR * 1.4);
-            grad.addColorStop(0, `rgba(150, 180, 255, ${0.9 + level * 0.1})`);
-            grad.addColorStop(0.45, `rgba(86, 114, 234, ${0.8 + level * 0.15})`);
-            grad.addColorStop(0.8, `rgba(50, 90, 220, ${0.5 + level * 0.3})`);
-            grad.addColorStop(1, `rgba(26, 177, 181, ${0.2 + level * 0.4})`);
-            ctx.fillStyle = grad;
+            const blobGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, baseR * 1.3);
+            blobGrad.addColorStop(0, `rgba(145,175,255,${0.92 + level * 0.08})`);
+            blobGrad.addColorStop(0.35, `rgba(86,114,234,${0.82 + level * 0.13})`);
+            blobGrad.addColorStop(0.7, `rgba(60,100,220,${0.55 + level * 0.25})`);
+            blobGrad.addColorStop(1, `rgba(26,177,181,${0.2 + level * 0.4})`);
+            ctx.fillStyle = blobGrad;
             ctx.fill();
 
-            // --- Inner specular highlight ---
-            const innerGrad = ctx.createRadialGradient(
-                cx - baseR * 0.15, cy - baseR * 0.25, baseR * 0.05,
-                cx, cy, baseR * 0.65
+            // ── Layer 7: Inner specular ──
+            const specGrad = ctx.createRadialGradient(
+                cx - baseR * 0.12, cy - baseR * 0.2, baseR * 0.04,
+                cx, cy, baseR * 0.55
             );
-            innerGrad.addColorStop(0, `rgba(255, 255, 255, ${0.22 + level * 0.12})`);
-            innerGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            specGrad.addColorStop(0, `rgba(255,255,255,${0.22 + level * 0.12})`);
+            specGrad.addColorStop(1, 'rgba(255,255,255,0)');
             ctx.beginPath();
-            ctx.arc(cx, cy, baseR * 0.65, 0, Math.PI * 2);
-            ctx.fillStyle = innerGrad;
+            ctx.arc(cx, cy, baseR * 0.55, 0, Math.PI * 2);
+            ctx.fillStyle = specGrad;
             ctx.fill();
 
             animFrameRef.current = requestAnimationFrame(animate);
