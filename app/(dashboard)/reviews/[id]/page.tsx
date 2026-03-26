@@ -1,213 +1,95 @@
-
 'use client';
 
-import { Box, Button, Container, Heading, Text, VStack, HStack, Card, Badge, Spinner, Separator } from '@chakra-ui/react';
+import { Box, Button, Heading, Text, VStack, HStack, Badge, Spinner, SimpleGrid } from '@chakra-ui/react';
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState, use } from 'react';
 import { toaster } from '@/components/ui/toaster';
 import { useRouter } from 'next/navigation';
-import { FaRobot, FaCheckCircle, FaExclamationTriangle, FaClock } from 'react-icons/fa';
+import { FaRobot, FaCheckCircle, FaExclamationTriangle, FaArrowLeft } from 'react-icons/fa';
 
-interface ReviewData {
-    id: string;
-    started_at: string;
-    ended_at: string;
-    answer: string;
-    question: {
-        content: string;
-        topic: string;
-        difficulty: string;
-    };
-    company: {
-        name: string;
-    };
-    evaluations: {
-        score: number;
-        feedback: any;
-        ai_model: string;
-    }[];
-}
+interface ReviewData { id: string; started_at: string; ended_at: string; answer: string; question: { content: string; topic: string; difficulty: string }; company: { name: string }; evaluations: { score: number; feedback: any; ai_model: string }[]; }
 
 export default function ReviewPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const router = useRouter();
     const supabase = createClient();
-
     const [review, setReview] = useState<ReviewData | null>(null);
     const [loading, setLoading] = useState(true);
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         const fetchReview = async () => {
-            const { data, error } = await supabase
-                .from('interview_attempts')
-                .select(`
-                    id,
-                    started_at,
-                    ended_at,
-                    answer,
-                    question:questions (
-                        content,
-                        topic,
-                        difficulty
-                    ),
-                    company:companies (
-                        name
-                    ),
-                    evaluations (
-                        score,
-                        feedback,
-                        ai_model
-                    )
-                `)
-                .eq('id', id)
-                .single();
-
-            if (error) {
-                console.error('Error fetching review:', error);
-                toaster.create({
-                    title: 'Error loading review',
-                    description: error.message,
-                    type: 'error',
-                });
-            } else {
-                const processedData = {
-                    ...data,
-                    question: Array.isArray(data.question) ? data.question[0] : data.question,
-                    company: Array.isArray(data.company) ? data.company[0] : data.company,
-                };
-                setReview(processedData as ReviewData);
-            }
+            const { data, error } = await supabase.from('interview_attempts').select(`id, started_at, ended_at, answer, question:questions (content, topic, difficulty), company:companies (name), evaluations (score, feedback, ai_model)`).eq('id', id).single();
+            if (error) { toaster.create({ title: 'Error loading review', description: error.message, type: 'error' }); }
+            else { setReview({ ...data, question: Array.isArray(data.question) ? data.question[0] : data.question, company: Array.isArray(data.company) ? data.company[0] : data.company } as ReviewData); }
             setLoading(false);
         };
-
         fetchReview();
     }, [id]);
 
-    if (loading) {
-        return (
-            <Container centerContent py={20}>
-                <Spinner size="xl" />
-                <Text mt={4}>Loading evaluation...</Text>
-            </Container>
-        );
-    }
+    if (loading) return <VStack py={20}><Spinner size="xl" color="gray.500" /><Text mt={4} color="gray.500">Loading evaluation...</Text></VStack>;
+    if (!review) return <VStack py={20}><Heading color="gray.400">Review not found</Heading><Button mt={4} onClick={() => router.push('/dashboard')} variant="outline" borderColor="rgba(255,255,255,0.08)" color="gray.400">Dashboard</Button></VStack>;
 
-    if (!review) {
-        return (
-            <Container centerContent py={20}>
-                <Heading>Review not found</Heading>
-                <Button mt={4} onClick={() => router.push('/dashboard')}>Go to Dashboard</Button>
-            </Container>
-        );
-    }
-
-    const evaluation = review.evaluations && review.evaluations.length > 0 ? review.evaluations[0] : null;
+    const evaluation = review.evaluations?.length > 0 ? review.evaluations[0] : null;
+    const diffColor = review.question.difficulty === 'Easy' ? '34,197,94' : review.question.difficulty === 'Medium' ? '234,179,8' : '239,68,68';
 
     return (
-        <Container maxW="container.xl" py={8}>
-            <VStack gap={8} align="stretch">
-                <Box>
-                    <LinkButton href="/companies">Back to Companies</LinkButton>
-                    <Heading size="2xl" mt={4}>Interview Result</Heading>
-                    <Text color="fgMuted" fontSize="lg">
-                        {review.company.name} - {review.question.topic}
-                    </Text>
-                </Box>
+        <VStack gap={8} align="stretch">
+            <Box>
+                <Button variant="ghost" size="sm" color="gray.500" onClick={() => router.push('/reviews')} mb={3} _hover={{ color: 'white' }}><FaArrowLeft style={{ marginRight: '6px' }} /> Back to Reviews</Button>
+                <Heading size="2xl" fontWeight="800" letterSpacing="-0.03em">Interview Result</Heading>
+                <Text color="gray.500" fontSize="sm" mt={1}>{review.company.name} — {review.question.topic}</Text>
+            </Box>
 
-                <SimpleGrid columns={{ base: 1, lg: 2 }} gap={8}>
-                    {/* Left Column: Q&A */}
-                    <VStack gap={6} align="stretch">
-                        <Card.Root variant="elevated">
-                            <Card.Header p={5}>
-                                <Heading size="md">Question</Heading>
-                                <Badge colorPalette="blue" mt={2}>{review.question.difficulty}</Badge>
-                            </Card.Header>
-                            <Card.Body p={5} pt={0}>
-                                <Text>{review.question.content}</Text>
-                            </Card.Body>
-                        </Card.Root>
+            <SimpleGrid columns={{ base: 1, lg: 2 }} gap={6}>
+                {/* Left: Q&A */}
+                <VStack gap={5} align="stretch">
+                    <Box p={6} borderRadius="xl" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <HStack mb={3}><Heading size="sm" fontWeight="700">Question</Heading><Badge ml={2} px={2} py={0} borderRadius="full" fontSize="xs" style={{ background: `rgba(${diffColor},0.08)`, color: `rgba(${diffColor},1)` }}>{review.question.difficulty}</Badge></HStack>
+                        <Text color="gray.300" fontSize="sm" lineHeight="1.7">{review.question.content}</Text>
+                    </Box>
+                    <Box p={6} borderRadius="xl" style={{ background: '#0d0d14', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <Heading size="sm" fontWeight="700" mb={3}>Your Answer</Heading>
+                        <Box whiteSpace="pre-wrap" fontSize="xs" fontFamily="monospace" color="#22c55e" lineHeight="1.8">
+                            {(review.answer || '// No code submitted').replace(/\*/g, '').replace(/\\n/g, '\n')}
+                        </Box>
+                    </Box>
+                </VStack>
 
-                        <Card.Root variant="elevated">
-                            <Card.Header p={5}>
-                                <Heading size="md">Interview Transcript / Solution</Heading>
-                            </Card.Header>
-                            <Card.Body p={5} pt={0} bg="gray.900" color="green.300" borderRadius="md" fontFamily="monospace">
-                                <Box whiteSpace="pre-wrap" fontSize="sm">
-                                    {(review.answer || "// No code submitted").replace(/\*/g, '').replace(/\\n/g, '\n')}
+                {/* Right: AI Feedback */}
+                <VStack gap={5} align="stretch">
+                    <Box p={6} borderRadius="xl" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', borderTop: evaluation ? `3px solid ${evaluation.score >= 70 ? '#22c55e' : '#eab308'}` : '3px solid rgba(255,255,255,0.06)' }}>
+                        <HStack justify="space-between" mb={5}>
+                            <HStack><FaRobot size={18} color="#5672ea" /><Heading size="sm" fontWeight="700">AI Evaluation</Heading></HStack>
+                            {evaluation && <Badge px={3} py={0.5} borderRadius="full" fontSize="sm" fontWeight="700" style={{ background: evaluation.score >= 70 ? 'rgba(34,197,94,0.1)' : 'rgba(234,179,8,0.1)', color: evaluation.score >= 70 ? '#22c55e' : '#eab308', border: `1px solid ${evaluation.score >= 70 ? 'rgba(34,197,94,0.2)' : 'rgba(234,179,8,0.2)'}` }}>{evaluation.score}/100</Badge>}
+                        </HStack>
+
+                        {evaluation ? (
+                            <VStack align="start" gap={5}>
+                                <Text color="gray.300" fontSize="sm" lineHeight="1.7">{(evaluation.feedback?.summary || 'No summary.').replace(/\*/g, '')}</Text>
+                                <Box w="full">
+                                    <Heading size="xs" mb={2} color="#22c55e" fontWeight="700">Strengths</Heading>
+                                    <VStack align="start" pl={2} gap={1.5}>
+                                        {(evaluation.feedback?.strengths || []).map((s: string, i: number) => (
+                                            <HStack key={i} align="start"><FaCheckCircle color="#22c55e" style={{ marginTop: '3px', flexShrink: 0 }} /><Text fontSize="xs" color="gray.400">{s.replace(/\*/g, '')}</Text></HStack>
+                                        ))}
+                                    </VStack>
                                 </Box>
-                            </Card.Body>
-                        </Card.Root>
-                    </VStack>
-
-                    {/* Right Column: AI Feedback */}
-                    <VStack gap={6} align="stretch">
-                        <Card.Root variant="elevated" borderTop="4px solid" borderColor={evaluation ? (evaluation.score >= 70 ? "green.500" : "orange.500") : "gray.300"}>
-                            <Card.Header p={5}>
-                                <HStack justify="space-between">
-                                    <HStack>
-                                        <FaRobot size={24} color="var(--chakra-colors-blue-500)" />
-                                        <Heading size="md">AI Evaluation</Heading>
-                                    </HStack>
-                                    {evaluation && (
-                                        <Badge size="lg" colorPalette={evaluation.score >= 70 ? "green" : "orange"}>
-                                            Score: {evaluation.score}/100
-                                        </Badge>
-                                    )}
-                                </HStack>
-                            </Card.Header>
-                            <Card.Body p={5} pt={0}>
-                                {evaluation ? (
-                                    <VStack align="start" gap={4}>
-                                        <Text>{(evaluation.feedback?.summary || "No summary available.").replace(/\*/g, '')}</Text>
-
-                                        <Box w="full">
-                                            <Heading size="sm" mb={2} color="green.600">Strengths</Heading>
-                                            <VStack align="start" pl={4}>
-                                                {(evaluation.feedback?.strengths || []).map((s: string, i: number) => (
-                                                    <HStack key={i} align="start">
-                                                        <FaCheckCircle color="green" style={{ marginTop: '4px' }} />
-                                                        <Text fontSize="sm">{s.replace(/\*/g, '')}</Text>
-                                                    </HStack>
-                                                ))}
-                                            </VStack>
-                                        </Box>
-
-                                        <Box w="full">
-                                            <Heading size="sm" mb={2} color="orange.600">Areas for Improvement</Heading>
-                                            <VStack align="start" pl={4}>
-                                                {(evaluation.feedback?.improvements || []).map((s: string, i: number) => (
-                                                    <HStack key={i} align="start">
-                                                        <FaExclamationTriangle color="orange" style={{ marginTop: '4px' }} />
-                                                        <Text fontSize="sm">{s.replace(/\*/g, '')}</Text>
-                                                    </HStack>
-                                                ))}
-                                            </VStack>
-                                        </Box>
+                                <Box w="full">
+                                    <Heading size="xs" mb={2} color="#eab308" fontWeight="700">Areas for Improvement</Heading>
+                                    <VStack align="start" pl={2} gap={1.5}>
+                                        {(evaluation.feedback?.improvements || []).map((s: string, i: number) => (
+                                            <HStack key={i} align="start"><FaExclamationTriangle color="#eab308" style={{ marginTop: '3px', flexShrink: 0 }} /><Text fontSize="xs" color="gray.400">{s.replace(/\*/g, '')}</Text></HStack>
+                                        ))}
                                     </VStack>
-                                ) : (
-                                    <VStack py={8} gap={4}>
-                                        <Text color="fgMuted">AI feedback is being generated...</Text>
-                                        <Button colorPalette="blue" variant="outline" disabled>
-                                            Generate Feedback (Coming Soon)
-                                        </Button>
-                                    </VStack>
-                                )}
-                            </Card.Body>
-                        </Card.Root>
-                    </VStack>
-                </SimpleGrid>
-            </VStack>
-        </Container>
+                                </Box>
+                            </VStack>
+                        ) : (
+                            <VStack py={8} gap={3}><Text color="gray.500" fontSize="sm">AI feedback is being generated...</Text></VStack>
+                        )}
+                    </Box>
+                </VStack>
+            </SimpleGrid>
+        </VStack>
     );
 }
-
-function LinkButton({ href, children }: { href: string, children: React.ReactNode }) {
-    const router = useRouter();
-    return (
-        <Button variant="ghost" size="sm" onClick={() => router.push(href)}>
-            {children}
-        </Button>
-    );
-}
-
-import { SimpleGrid } from '@chakra-ui/react';

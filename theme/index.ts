@@ -10,7 +10,7 @@ const customConfig = defineConfig({
                     200: { value: '#c7d6fc' },
                     300: { value: '#a3bbf8' },
                     400: { value: '#7b98f2' },
-                    500: { value: '#5672ea' }, // Primary Brand Color
+                    500: { value: '#5672ea' },
                     600: { value: '#3f54de' },
                     700: { value: '#3240c9' },
                     800: { value: '#2b35a3' },
@@ -23,7 +23,7 @@ const customConfig = defineConfig({
                     200: { value: '#b0f1f1' },
                     300: { value: '#7ae6e7' },
                     400: { value: '#3dd3d6' },
-                    500: { value: '#1ab1b5' }, // Secondary Accent Color
+                    500: { value: '#1ab1b5' },
                     600: { value: '#138e93' },
                     700: { value: '#137277' },
                     800: { value: '#145c60' },
@@ -45,11 +45,11 @@ const customConfig = defineConfig({
             colors: {
                 bg: {
                     default: { value: '{colors.white}' },
-                    _dark: { value: '{colors.gray.900}' },
+                    _dark: { value: '#08080c' },
                 },
                 bgSub: {
                     default: { value: '{colors.gray.50}' },
-                    _dark: { value: '{colors.gray.800}' },
+                    _dark: { value: '#0c0c14' },
                 },
                 fg: {
                     default: { value: '{colors.gray.900}' },
@@ -61,7 +61,7 @@ const customConfig = defineConfig({
                 },
                 border: {
                     default: { value: '{colors.gray.200}' },
-                    _dark: { value: '{colors.gray.700}' },
+                    _dark: { value: '#1a1a2e' },
                 },
             },
         },

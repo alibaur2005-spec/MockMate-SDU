@@ -1,19 +1,12 @@
 'use client';
 
-import { Box, Container, Heading, Text, VStack, HStack, Button, Input, Icon, Table, Badge, Progress, Card, Separator, IconButton, Dialog, Portal } from '@chakra-ui/react';
+import { Box, Heading, Text, VStack, HStack, Button, Input, Icon, Badge, Separator, IconButton, Dialog, Portal } from '@chakra-ui/react';
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState, useRef } from 'react';
 import { toaster } from '@/components/ui/toaster';
-import { FaCloudUploadAlt, FaFileAudio, FaCheck, FaTimes, FaSpinner, FaMicrophone, FaStop, FaEye, FaTrash } from 'react-icons/fa';
+import { FaCloudUploadAlt, FaFileAudio, FaMicrophone, FaStop, FaEye, FaTrash, FaSpinner } from 'react-icons/fa';
 
-
-interface Transcription {
-    id: string;
-    file_name: string;
-    created_at: string;
-    status: 'processing' | 'completed' | 'failed';
-    transcription_text?: string;
-}
+interface Transcription { id: string; file_name: string; created_at: string; status: 'processing' | 'completed' | 'failed'; transcription_text?: string; }
 
 export default function TranscriberPage() {
     const [transcriptions, setTranscriptions] = useState<Transcription[]>([]);
@@ -25,515 +18,165 @@ export default function TranscriberPage() {
     const chunksRef = useRef<Blob[]>([]);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const mimeTypeRef = useRef<string>(''); // Store the actual mime type used
+    const mimeTypeRef = useRef<string>('');
     const supabase = createClient();
-
-    // Web Speech API State
     const [isListening, setIsListening] = useState(false);
     const [liveTranscript, setLiveTranscript] = useState('');
-    const recognitionRef = useRef<any>(null); // Use any for SpeechRecognition to avoid type issues
-
+    const recognitionRef = useRef<any>(null);
     const [selectedTranscription, setSelectedTranscription] = useState<Transcription | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const openModal = (transcription: Transcription) => {
-        setSelectedTranscription(transcription);
-        setIsModalOpen(true);
-    };
-
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setSelectedTranscription(null);
-    };
-
-
-
     useEffect(() => {
-        const fetchTranscriptions = async () => {
+        const fetch = async () => {
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
-
-            const { data, error } = await supabase
-                .from('transcriptions')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
-
-            if (error) {
-                console.error('Error fetching transcriptions:', error);
-            } else {
-                setTranscriptions(data || []);
-            }
+            const { data } = await supabase.from('transcriptions').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+            setTranscriptions(data || []);
             setLoading(false);
         };
-
-        fetchTranscriptions();
+        fetch();
     }, []);
 
     const deleteTranscription = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!confirm('Are you sure you want to delete this transcription?')) return;
-
+        if (!confirm('Delete this transcription?')) return;
         const { error } = await supabase.from('transcriptions').delete().eq('id', id);
-
-        if (error) {
-            toaster.create({ title: 'Delete failed', description: error.message, type: 'error' });
-        } else {
-            setTranscriptions(prev => prev.filter(t => t.id !== id));
-            toaster.create({ title: 'Transcription deleted', type: 'success' });
-            if (selectedTranscription?.id === id) {
-                closeModal();
-            }
-        }
+        if (error) { toaster.create({ title: 'Delete failed', description: error.message, type: 'error' }); }
+        else { setTranscriptions(prev => prev.filter(t => t.id !== id)); toaster.create({ title: 'Deleted', type: 'success' }); if (selectedTranscription?.id === id) { setIsModalOpen(false); setSelectedTranscription(null); } }
     };
 
-
-
     const startListening = () => {
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            toaster.create({
-                title: 'Browser not supported',
-                description: 'Your browser does not support Web Speech API. Please use Chrome or Edge.',
-                type: 'error',
-            });
-            return;
-        }
-
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
-
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
-
-        recognition.onstart = () => {
-            setIsListening(true);
-            setLiveTranscript('');
-            setRecordingTime(0);
-            timerRef.current = setInterval(() => {
-                setRecordingTime(prev => prev + 1);
-            }, 1000);
-        };
-
-        recognition.onresult = (event: any) => {
-            let finalTranscript = '';
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalTranscript += event.results[i][0].transcript;
-                } else {
-                    // Can handle interim results if needed
-                }
-            }
-            // For simplicity in this demo, accessing the latest result efficiently
-            // Actually, let's just grab the full text content if we can, or accumulate.
-            // A robust way for simple transcription:
-            const currentTranscript = Array.from(event.results)
-                .map((result: any) => result[0].transcript)
-                .join('');
-            setLiveTranscript(currentTranscript);
-        };
-
-        recognition.onerror = (event: any) => {
-            if (event.error === 'network') {
-                toaster.create({
-                    title: 'Connection Error',
-                    description: 'Browser speech service unreachable. Please try the "High Quality Recording" option.',
-                    type: 'error'
-                });
-                stopListening();
-            } else if (event.error === 'not-allowed') {
-                toaster.create({ title: 'Microphone denied', type: 'error' });
-                stopListening();
-            } else {
-                console.error('Speech recognition error', event.error);
-            }
-        };
-
-        recognition.onend = () => {
-            // If stopped manually, isListening will be false. 
-            // If stopped automatically (silence), we might want to restart or just finish.
-            // For now, let's treat it as finished.
-            if (isListening) {
-                // It stopped unexpectedly (maybe silence), but we treat it as done? 
-                // Or we can auto-restart. Let's simplfy: stop UI.
-                setIsListening(false);
-                if (timerRef.current) clearInterval(timerRef.current);
-            }
-        };
-
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { toaster.create({ title: 'Browser not supported', type: 'error' }); return; }
+        const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        const recognition = new SR();
+        recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'en-US';
+        recognition.onstart = () => { setIsListening(true); setLiveTranscript(''); setRecordingTime(0); timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000); };
+        recognition.onresult = (event: any) => { setLiveTranscript(Array.from(event.results).map((r: any) => r[0].transcript).join('')); };
+        recognition.onerror = (event: any) => { if (event.error === 'network' || event.error === 'not-allowed') { toaster.create({ title: 'Error', description: event.error, type: 'error' }); stopListening(); } };
+        recognition.onend = () => { if (isListening) { setIsListening(false); if (timerRef.current) clearInterval(timerRef.current); } };
         recognitionRef.current = recognition;
         recognition.start();
     };
 
     const stopListening = async () => {
-        if (recognitionRef.current) {
-            recognitionRef.current.stop();
-            setIsListening(false);
-            if (timerRef.current) {
-                clearInterval(timerRef.current);
-                timerRef.current = null;
-            }
-
-            // Save the transcript to DB
-            if (liveTranscript.trim()) {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                    const { data, error } = await supabase.from('transcriptions').insert({
-                        user_id: user.id,
-                        file_name: `Live Recording - ${new Date().toLocaleString()}`,
-                        status: 'completed',
-                        transcription_text: liveTranscript,
-                        file_url: null, // No audio file for live text
-                        completed_at: new Date().toISOString()
-                    }).select().single();
-
-                    if (!error && data) {
-                        setTranscriptions(prev => [data, ...prev]);
-                        toaster.create({ title: 'Transcription saved', type: 'success' });
-                    }
-                }
-            }
-        }
+        if (recognitionRef.current) { recognitionRef.current.stop(); setIsListening(false); if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+            if (liveTranscript.trim()) { const { data: { user } } = await supabase.auth.getUser(); if (user) { const { data } = await supabase.from('transcriptions').insert({ user_id: user.id, file_name: `Live Recording - ${new Date().toLocaleString()}`, status: 'completed', transcription_text: liveTranscript, file_url: null, completed_at: new Date().toISOString() }).select().single(); if (data) { setTranscriptions(prev => [data, ...prev]); toaster.create({ title: 'Saved', type: 'success' }); } } } }
     };
 
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-            // Determine supported mime type
-            const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' :
-                MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' :
-                    MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' :
-                        'audio/ogg';
-
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/ogg';
             mimeTypeRef.current = mimeType;
-            const mediaRecorder = new MediaRecorder(stream, { mimeType });
-            mediaRecorderRef.current = mediaRecorder;
-            chunksRef.current = [];
-
-            mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) {
-                    chunksRef.current.push(e.data);
-                }
-            };
-
-            mediaRecorder.onstop = async () => {
-                const type = mimeTypeRef.current || 'audio/webm';
-                const ext = type.split('/')[1].split(';')[0];
-                const audioBlob = new Blob(chunksRef.current, { type });
-                const file = new File([audioBlob], `recording-${new Date().toISOString()}.${ext}`, { type });
-
-                await processFile(file);
-
-                // Stop all tracks
-                stream.getTracks().forEach(track => track.stop());
-            };
-
-            mediaRecorder.start(1000); // Collect chunks every second
-            setIsRecording(true);
-            setRecordingTime(0);
-            timerRef.current = setInterval(() => {
-                setRecordingTime(prev => prev + 1);
-            }, 1000);
-
-        } catch (err: any) {
-            console.error(err);
-            toaster.create({
-                title: 'Microphone access denied',
-                description: 'Please allow microphone access to record audio.',
-                type: 'error',
-            });
-        }
+            const mr = new MediaRecorder(stream, { mimeType }); mediaRecorderRef.current = mr; chunksRef.current = [];
+            mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+            mr.onstop = async () => { const ext = mimeType.split('/')[1].split(';')[0]; const blob = new Blob(chunksRef.current, { type: mimeType }); const file = new File([blob], `recording-${new Date().toISOString()}.${ext}`, { type: mimeType }); await processFile(file); stream.getTracks().forEach(t => t.stop()); };
+            mr.start(1000); setIsRecording(true); setRecordingTime(0); timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000);
+        } catch { toaster.create({ title: 'Microphone access denied', type: 'error' }); }
     };
 
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && isRecording) {
-            mediaRecorderRef.current.stop();
-            setIsRecording(false);
-            if (timerRef.current) {
-                clearInterval(timerRef.current);
-                timerRef.current = null;
-            }
-        }
-    };
-
-
+    const stopRecording = () => { if (mediaRecorderRef.current && isRecording) { mediaRecorderRef.current.stop(); setIsRecording(false); if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } } };
 
     const processFile = async (file: File) => {
         setUploading(true);
         const { data: { user } } = await supabase.auth.getUser();
-
-        if (!user) {
-            setUploading(false);
-            return;
-        }
-
-        // 1. Create record in DB
-        const { data, error } = await supabase
-            .from('transcriptions')
-            .insert({
-                user_id: user.id,
-                file_name: file.name,
-                status: 'processing',
-                file_url: 'blob:local',
-            })
-            .select()
-            .single();
-
-        if (error) {
-            toaster.create({ title: 'Upload failed', description: error.message, type: 'error' });
-            setUploading(false);
-            return;
-        }
-
-        // 2. Add to list immediately
-        setTranscriptions(prev => [data, ...prev]);
-        setUploading(false);
-        toaster.create({ title: 'Processing started', description: 'Sending to Gemini AI...', type: 'success' });
-
-        // 3. Call Gemini AI
+        if (!user) { setUploading(false); return; }
+        const { data, error } = await supabase.from('transcriptions').insert({ user_id: user.id, file_name: file.name, status: 'processing', file_url: 'blob:local' }).select().single();
+        if (error) { toaster.create({ title: 'Upload failed', description: error.message, type: 'error' }); setUploading(false); return; }
+        setTranscriptions(prev => [data, ...prev]); setUploading(false); toaster.create({ title: 'Processing...', type: 'success' });
         try {
-            const formData = new FormData();
-            formData.append("file", file);
-
-            const response = await fetch('/api/transcribe', {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!response.ok) throw new Error("Transcription failed");
-
+            const fd = new FormData(); fd.append('file', file);
+            const response = await fetch('/api/transcribe', { method: 'POST', body: fd });
+            if (!response.ok) throw new Error('Failed');
             const result = await response.json();
-            const transcriptionText = result.transcription || "No text generated.";
-
-            const { error: updateError } = await supabase
-                .from('transcriptions')
-                .update({
-                    status: 'completed',
-                    transcription_text: transcriptionText,
-                    completed_at: new Date().toISOString()
-                })
-                .eq('id', data.id);
-
-            if (!updateError) {
-                // UPDATE LOCAL STATE IMMEDIATELY
-                setTranscriptions(prev => prev.map(t =>
-                    t.id === data.id
-                        ? { ...t, status: 'completed', transcription_text: transcriptionText, completed_at: new Date().toISOString() }
-                        : t
-                ));
-
-                toaster.create({ title: 'Transcription complete', type: 'success' });
-            }
-        } catch (err: any) {
-            console.error(err);
-            await supabase.from('transcriptions').update({ status: 'failed' }).eq('id', data.id);
-
-            // UPDATE LOCAL STATE IMMEDIATELY (Failed)
-            setTranscriptions(prev => prev.map(t =>
-                t.id === data.id ? { ...t, status: 'failed' } : t
-            ));
-
-            toaster.create({ title: 'Transcription failed', description: err.message, type: 'error' });
-        }
+            const text = result.transcription || 'No text.';
+            await supabase.from('transcriptions').update({ status: 'completed', transcription_text: text, completed_at: new Date().toISOString() }).eq('id', data.id);
+            setTranscriptions(prev => prev.map(t => t.id === data.id ? { ...t, status: 'completed' as const, transcription_text: text } : t));
+            toaster.create({ title: 'Complete', type: 'success' });
+        } catch (err: any) { await supabase.from('transcriptions').update({ status: 'failed' }).eq('id', data.id); setTranscriptions(prev => prev.map(t => t.id === data.id ? { ...t, status: 'failed' as const } : t)); toaster.create({ title: 'Failed', description: err.message, type: 'error' }); }
     };
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        if (!file.type.startsWith('audio/')) {
-            toaster.create({
-                title: 'Invalid file type',
-                description: 'Please upload an audio file.',
-                type: 'error',
-            });
-            return;
-        }
-        await processFile(file);
-    };
-
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (!file) return; if (!file.type.startsWith('audio/')) { toaster.create({ title: 'Invalid file', type: 'error' }); return; } await processFile(file); };
+    const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+    const statusColor = (s: string) => s === 'completed' ? '34,197,94' : s === 'processing' ? '86,114,234' : '239,68,68';
 
     return (
-        <Container maxW="container.xl" py={8}>
-            <VStack gap={8} align="stretch">
-                <Box>
-                    <Heading size="2xl" mb={2}>Audio Transcriber</Heading>
-                    <Text color="fgMuted" fontSize="lg">Upload interview recordings to get instant AI transcriptions.</Text>
-                </Box>
+        <VStack gap={8} align="stretch">
+            <Box>
+                <Heading size="2xl" fontWeight="800" letterSpacing="-0.03em" mb={2}>Audio Transcriber</Heading>
+                <Text color="gray.500" fontSize="sm">Upload interview recordings to get instant AI transcriptions.</Text>
+            </Box>
 
-                {/* Upload Area */}
-                <Card.Root variant="elevated" borderStyle="dashed" borderWidth="2px" borderColor="border">
-                    <Card.Body style={{ padding: '40px' }} textAlign="center">
-                        <VStack gap={4}>
-                            <Icon as={FaCloudUploadAlt} boxSize={16} color="brand.500" />
-                            <Heading size="lg">Upload or Record Audio</Heading>
-                            <Text color="fgMuted">Drag and drop, browse, or record directly</Text>
-
-                            <HStack gap={4} wrap="wrap" justify="center">
-                                <Button
-                                    size="lg"
-                                    colorPalette="brand"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    loading={uploading}
-                                    disabled={isListening || isRecording}
-                                    px={10}
-                                >
-                                    Select File
-                                </Button>
-
-                                {!isListening && !isRecording && (
-                                    <>
-                                        <Button
-                                            size="lg"
-                                            colorPalette="blue"
-                                            variant="outline"
-                                            onClick={startListening}
-                                            disabled={uploading}
-                                            px={10}
-                                        >
-                                            <FaMicrophone style={{ marginRight: '8px' }} /> Live Transcribe
-                                        </Button>
-                                        <Button
-                                            size="lg"
-                                            colorPalette="red"
-                                            variant="outline"
-                                            onClick={startRecording}
-                                            disabled={uploading}
-                                            px={10}
-                                        >
-                                            <FaMicrophone style={{ marginRight: '8px' }} /> High Quality Recording
-                                        </Button>
-                                    </>
-                                )}
-
-                                {isListening && (
-                                    <Button
-                                        size="lg"
-                                        colorPalette="blue"
-                                        onClick={stopListening}
-                                    >
-                                        <FaStop style={{ marginRight: '8px' }} /> Stop Live ({formatTime(recordingTime)})
-                                    </Button>
-                                )}
-
-                                {isRecording && (
-                                    <Button
-                                        size="lg"
-                                        colorPalette="red"
-                                        onClick={stopRecording}
-                                    >
-                                        <FaStop style={{ marginRight: '8px' }} /> Stop Recording ({formatTime(recordingTime)})
-                                    </Button>
-                                )}
-                            </HStack>
-
-                            {isListening && liveTranscript && (
-                                <Box w="full" p={4} bg="gray.50" borderRadius="md" border="1px solid" borderColor="gray.200" mt={4}>
-                                    <Text fontWeight="bold" mb={2}>Live Transcript:</Text>
-                                    <Text color="gray.700">{liveTranscript}</Text>
-                                </Box>
-                            )}
-
-                            <Input
-                                type="file"
-                                display="none"
-                                ref={fileInputRef}
-                                accept="audio/*"
-                                onChange={handleFileUpload}
-                            />
-                        </VStack>
-                    </Card.Body>
-                </Card.Root>
-
-                <Separator />
-
-                {/* History */}
-                <VStack align="stretch" gap={4}>
-                    <Heading size="lg">Recent Transcriptions</Heading>
-
-                    {transcriptions.length === 0 ? (
-                        <Text color="fgMuted">No transcriptions yet.</Text>
-                    ) : (
-                        <VStack gap={4} align="stretch">
-                            {transcriptions.map((t) => (
-                                <Card.Root key={t.id} variant="elevated">
-                                    <Card.Body style={{ padding: '24px' }}>
-                                        <VStack align="stretch" gap={4}>
-                                            <HStack justify="space-between" w="full">
-                                                <HStack>
-                                                    <Icon as={FaFileAudio} color="blue.500" />
-                                                    <VStack align="start" gap={0}>
-                                                        <Text fontWeight="medium">{t.file_name}</Text>
-                                                        <Text fontSize="xs" color="fgMuted">
-                                                            {t.created_at ? new Date(t.created_at).toLocaleString() : 'Just now'}
-                                                        </Text>
-                                                    </VStack>
-                                                </HStack>
-                                                <HStack alignItems="center" gap={2}>
-                                                    <Badge
-                                                        colorPalette={
-                                                            t.status === 'completed' ? 'green' :
-                                                                t.status === 'processing' ? 'blue' : 'red'
-                                                        }
-                                                        size="md"
-                                                    >
-                                                        {t.status === 'processing' && <FaSpinner className="animate-spin" style={{ display: 'inline', marginRight: '4px' }} />}
-                                                        {t.status.toUpperCase()}
-                                                    </Badge>
-
-                                                    {t.status === 'completed' && (
-                                                        <Button size="sm" variant="surface" onClick={() => openModal(t)} px={6}>
-                                                            <FaEye style={{ marginRight: '4px' }} /> View
-                                                        </Button>
-                                                    )}
-                                                    <IconButton
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        colorPalette="red"
-                                                        onClick={(e) => deleteTranscription(t.id, e)}
-                                                        aria-label="Delete transcription"
-                                                    >
-                                                        <FaTrash />
-                                                    </IconButton>
-                                                </HStack>
-                                            </HStack>
-                                        </VStack>
-                                    </Card.Body>
-                                </Card.Root>
-                            ))}
-                        </VStack>
+            {/* Upload */}
+            <Box p={10} textAlign="center" borderRadius="xl" style={{ background: 'rgba(255,255,255,0.02)', border: '2px dashed rgba(255,255,255,0.08)' }}>
+                <VStack gap={4}>
+                    <Icon as={FaCloudUploadAlt} boxSize={12} color="gray.600" />
+                    <Heading size="md" fontWeight="700">Upload or Record Audio</Heading>
+                    <Text color="gray.500" fontSize="xs">Drag and drop, browse, or record directly</Text>
+                    <HStack gap={3} wrap="wrap" justify="center">
+                        <Button size="sm" onClick={() => fileInputRef.current?.click()} loading={uploading} disabled={isListening || isRecording} bg="white" color="#08080c" borderRadius="lg" fontWeight="600" _hover={{ bg: 'gray.200' }} px={6}>Select File</Button>
+                        {!isListening && !isRecording && (
+                            <>
+                                <Button size="sm" variant="outline" onClick={startListening} disabled={uploading} borderColor="rgba(255,255,255,0.08)" color="gray.400" borderRadius="lg" px={6} _hover={{ bg: 'rgba(255,255,255,0.04)' }}><FaMicrophone style={{ marginRight: '6px' }} /> Live Transcribe</Button>
+                                <Button size="sm" variant="outline" onClick={startRecording} disabled={uploading} borderColor="rgba(255,255,255,0.08)" color="gray.400" borderRadius="lg" px={6} _hover={{ bg: 'rgba(255,255,255,0.04)' }}><FaMicrophone style={{ marginRight: '6px' }} /> HQ Recording</Button>
+                            </>
+                        )}
+                        {isListening && <Button size="sm" onClick={stopListening} bg="#5672ea" color="white" borderRadius="lg" _hover={{ bg: '#3f54de' }}><FaStop style={{ marginRight: '6px' }} /> Stop ({formatTime(recordingTime)})</Button>}
+                        {isRecording && <Button size="sm" onClick={stopRecording} bg="#ef4444" color="white" borderRadius="lg" _hover={{ bg: '#dc2626' }}><FaStop style={{ marginRight: '6px' }} /> Stop ({formatTime(recordingTime)})</Button>}
+                    </HStack>
+                    {isListening && liveTranscript && (
+                        <Box w="full" p={4} borderRadius="lg" mt={2} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                            <Text fontWeight="600" mb={1} fontSize="xs" color="gray.400">Live Transcript:</Text>
+                            <Text color="gray.300" fontSize="sm">{liveTranscript}</Text>
+                        </Box>
                     )}
+                    <Input type="file" display="none" ref={fileInputRef} accept="audio/*" onChange={handleFileUpload} />
                 </VStack>
+            </Box>
+
+            <Separator style={{ borderColor: 'rgba(255,255,255,0.05)' }} />
+
+            {/* History */}
+            <VStack align="stretch" gap={4}>
+                <Heading size="md" fontWeight="700">Recent Transcriptions</Heading>
+                {transcriptions.length === 0 ? <Text color="gray.600" fontSize="sm">No transcriptions yet.</Text> : (
+                    <VStack gap={3} align="stretch">
+                        {transcriptions.map(t => (
+                            <Box key={t.id} p={5} borderRadius="xl" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }} _hover={{ borderColor: 'rgba(255,255,255,0.1)' }} transition="all 0.15s">
+                                <HStack justify="space-between" w="full">
+                                    <HStack>
+                                        <Icon as={FaFileAudio} color="#5672ea" boxSize={4} />
+                                        <VStack align="start" gap={0}>
+                                            <Text fontWeight="600" fontSize="sm">{t.file_name}</Text>
+                                            <Text fontSize="xs" color="gray.600">{t.created_at ? new Date(t.created_at).toLocaleString() : 'Just now'}</Text>
+                                        </VStack>
+                                    </HStack>
+                                    <HStack gap={2}>
+                                        <Badge px={2.5} py={0.5} borderRadius="full" fontSize="xs" style={{ background: `rgba(${statusColor(t.status)},0.1)`, color: `rgba(${statusColor(t.status)},1)` }}>
+                                            {t.status === 'processing' && <FaSpinner style={{ display: 'inline', marginRight: '4px' }} />}{t.status.toUpperCase()}
+                                        </Badge>
+                                        {t.status === 'completed' && <Button size="xs" variant="outline" onClick={() => { setSelectedTranscription(t); setIsModalOpen(true); }} borderColor="rgba(255,255,255,0.08)" color="gray.400" borderRadius="lg" _hover={{ bg: 'rgba(255,255,255,0.04)' }}><FaEye style={{ marginRight: '4px' }} /> View</Button>}
+                                        <IconButton size="xs" variant="ghost" color="gray.600" onClick={(e) => deleteTranscription(t.id, e)} aria-label="Delete" _hover={{ color: '#ef4444' }}><FaTrash /></IconButton>
+                                    </HStack>
+                                </HStack>
+                            </Box>
+                        ))}
+                    </VStack>
+                )}
             </VStack>
 
             <Dialog.Root open={isModalOpen} onOpenChange={(e) => setIsModalOpen(e.open)}>
                 <Dialog.Backdrop />
                 <Dialog.Positioner>
-                    <Dialog.Content bg="gray.900" color="white" borderRadius="xl" maxW="lg" p={0}>
-                        <Dialog.Header p={6} borderBottomWidth="1px" borderColor="gray.800">
-                            <Dialog.Title fontSize="lg" fontWeight="bold">{selectedTranscription?.file_name}</Dialog.Title>
-                        </Dialog.Header>
-                        <Dialog.Body p={6}>
-                            <Box maxHeight="60vh" overflowY="auto" whiteSpace="pre-wrap" p={4} bg="gray.800" borderRadius="md" color="gray.200">
-                                <Text>{selectedTranscription?.transcription_text}</Text>
-                            </Box>
-                        </Dialog.Body>
-                        <Dialog.Footer p={6} borderTopWidth="1px" borderColor="gray.800">
-                            <Button variant="outline" onClick={closeModal} borderColor="gray.700" color="white" _hover={{ bg: "gray.800" }}>Close</Button>
-                        </Dialog.Footer>
-                        <Dialog.CloseTrigger top="2" right="2" color="gray.400" />
+                    <Dialog.Content borderRadius="xl" maxW="lg" p={0} style={{ background: '#0d0d14', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <Dialog.Header p={5} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}><Dialog.Title fontSize="md" fontWeight="700">{selectedTranscription?.file_name}</Dialog.Title></Dialog.Header>
+                        <Dialog.Body p={5}><Box maxHeight="60vh" overflowY="auto" whiteSpace="pre-wrap" p={4} borderRadius="lg" style={{ background: 'rgba(255,255,255,0.03)' }} color="gray.300" fontSize="sm" lineHeight="1.8"><Text>{selectedTranscription?.transcription_text}</Text></Box></Dialog.Body>
+                        <Dialog.Footer p={5} style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}><Button variant="outline" onClick={() => setIsModalOpen(false)} borderColor="rgba(255,255,255,0.08)" color="gray.400" borderRadius="lg" _hover={{ bg: 'rgba(255,255,255,0.04)' }}>Close</Button></Dialog.Footer>
+                        <Dialog.CloseTrigger top="2" right="2" color="gray.500" />
                     </Dialog.Content>
                 </Dialog.Positioner>
             </Dialog.Root>
-        </Container>
+        </VStack>
     );
 }
-
-

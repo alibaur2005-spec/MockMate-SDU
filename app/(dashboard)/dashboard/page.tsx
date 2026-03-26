@@ -1,102 +1,48 @@
-
 'use client';
 
-import {
-    Box,
-    Container,
-    Heading,
-    Text,
-    SimpleGrid,
-    VStack,
-    HStack,
-    Icon,
-    Button,
-    Card,
-    Badge,
-    Stat
-} from '@chakra-ui/react';
+import { Box, Container, Heading, Text, SimpleGrid, VStack, HStack, Icon, Button, Card } from '@chakra-ui/react';
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState } from 'react';
-import {
-    FaBuilding,
-    FaCode,
-    FaMicrophone,
-    FaChartLine,
-    FaArrowRight,
-    FaRocket
-} from 'react-icons/fa';
+import { FaBuilding, FaCode, FaMicrophone, FaChartLine, FaArrowRight, FaRocket } from 'react-icons/fa';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
+
+const MotionBox = motion(Box);
 
 export default function DashboardPage() {
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({
-        streak: 0,
-        problemsSolved: 0,
-        companiesUnlocked: 0
-    });
+    const [stats, setStats] = useState({ streak: 0, problemsSolved: 0, companiesUnlocked: 0 });
+
     useEffect(() => {
         const supabase = createClient();
         const getData = async () => {
             const { data: { user } } = await supabase.auth.getUser();
-
             if (user) {
-                // Fetch Profile for Name
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('full_name, email')
-                    .eq('id', user.id)
-                    .single();
-
+                const { data: profile } = await supabase.from('profiles').select('full_name, email').eq('id', user.id).single();
                 setUser({ ...user, ...profile });
 
-                // Fetch Attempts for Stats
-                const { data: attempts } = await supabase
-                    .from('interview_attempts')
-                    .select('id, status, started_at, question_id, company_id')
-                    .eq('user_id', user.id);
-
+                const { data: attempts } = await supabase.from('interview_attempts').select('id, status, started_at, question_id, company_id').eq('user_id', user.id);
                 if (attempts) {
-                    // 1. Problems Solved (Distinct completed questions)
                     const completedAttempts = attempts.filter(a => a.status === 'completed');
                     const distinctQuestions = new Set(completedAttempts.map(a => a.question_id)).size;
-
-                    // 2. Companies Unlocked (Distinct companies attempted)
                     const distinctCompanies = new Set(attempts.map(a => a.company_id).filter(id => id !== null)).size;
-
-                    // 3. Current Streak
                     const dates = [...new Set(attempts.map(a => new Date(a.started_at).toISOString().split('T')[0]))].sort().reverse();
-
                     let streak = 0;
                     if (dates.length > 0) {
                         const today = new Date().toISOString().split('T')[0];
                         const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-
-                        // Check if latest activity is today or yesterday
                         if (dates[0] === today || dates[0] === yesterday) {
                             streak = 1;
                             let currentDate = new Date(dates[0]);
-
                             for (let i = 1; i < dates.length; i++) {
                                 const prevDate = new Date(dates[i]);
-                                const diffTime = Math.abs(currentDate.getTime() - prevDate.getTime());
-                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-                                if (diffDays === 1) {
-                                    streak++;
-                                    currentDate = prevDate;
-                                } else {
-                                    break;
-                                }
+                                const diffDays = Math.ceil(Math.abs(currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+                                if (diffDays === 1) { streak++; currentDate = prevDate; } else break;
                             }
                         }
                     }
-
-                    setStats({
-                        streak,
-                        problemsSolved: distinctQuestions,
-                        companiesUnlocked: distinctCompanies
-                    });
+                    setStats({ streak, problemsSolved: distinctQuestions, companiesUnlocked: distinctCompanies });
                 }
             }
             setLoading(false);
@@ -105,130 +51,98 @@ export default function DashboardPage() {
     }, []);
 
     const features = [
-        {
-            title: 'Practice Interviews',
-            description: 'Solve real interview questions from top tech companies.',
-            icon: FaCode,
-            color: 'blue.500',
-            link: '/companies',
-            cta: 'Start Coding'
-        },
-        {
-            title: 'AI Transcriber',
-            description: 'Record and transcribe your mock interviews with AI.',
-            icon: FaMicrophone,
-            color: 'red.500',
-            link: '/transcriber',
-            cta: 'Open Transcriber'
-        },
-        {
-            title: 'Admission Chances',
-            description: 'Get AI-powered predictions on your admission probability.',
-            icon: FaChartLine,
-            color: 'green.500',
-            link: '/admission',
-            cta: 'View Prediction'
-        }
+        { title: 'Practice Interviews', description: 'Solve real interview questions from top tech companies.', icon: FaCode, tint: '86,114,234', link: '/companies', cta: 'Start Coding' },
+        { title: 'AI Transcriber', description: 'Record and transcribe your mock interviews with AI.', icon: FaMicrophone, tint: '239,68,68', link: '/transcriber', cta: 'Open Transcriber' },
+        { title: 'Admission Chances', description: 'Get AI-powered predictions on your admission probability.', icon: FaChartLine, tint: '34,197,94', link: '/admission', cta: 'View Prediction' },
+    ];
+
+    const statCards = [
+        { label: 'Current Streak', value: `${stats.streak} Days`, icon: FaRocket, tint: '168,85,247' },
+        { label: 'Problems Solved', value: stats.problemsSolved, icon: FaCode, tint: '86,114,234' },
+        { label: 'Companies Unlocked', value: stats.companiesUnlocked, icon: FaBuilding, tint: '34,197,94' },
     ];
 
     return (
-        <Container maxW="container.xl" py={8}>
-            <VStack gap={8} align="stretch">
-
-                {/* Welcome Section */}
-                <Box py={8}>
-                    <Heading size="3xl" mb={4}>
-                        Welcome back{user?.full_name ? `, ${user.full_name.split(' ')[0]}` : user?.email ? `, ${user.email.split('@')[0]}` : ''}! 👋
+        <VStack gap={8} align="stretch">
+            {/* Welcome */}
+            <MotionBox initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 } as any}>
+                <Box py={4}>
+                    <Heading size="3xl" fontWeight="800" letterSpacing="-0.03em" mb={3}>
+                        Welcome back{user?.full_name ? `, ${user.full_name.split(' ')[0]}` : user?.email ? `, ${user.email.split('@')[0]}` : ''}
                     </Heading>
-                    <Text fontSize="xl" color="fgMuted" maxW="2xl">
-                        Ready to ace your next technical interview? Track your progress,
-                        practice coding problems, and get AI feedback all in one place.
+                    <Text fontSize="md" color="gray.500" maxW="xl">
+                        Ready to ace your next technical interview? Track your progress, practice problems, and get AI feedback.
                     </Text>
                 </Box>
+            </MotionBox>
 
-                {/* Quick Stats Row (Placeholder for now) */}
-                <SimpleGrid columns={{ base: 1, md: 3 }} gap={6}>
-                    <Card.Root variant="elevated" borderLeft="4px solid" borderColor="purple.500">
-                        <Card.Body p={6}>
+            {/* Stats */}
+            <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+                {statCards.map((s, i) => (
+                    <MotionBox key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 + i * 0.08 } as any}>
+                        <Box
+                            p={5}
+                            borderRadius="xl"
+                            style={{
+                                background: `linear-gradient(135deg, rgba(${s.tint},0.08), rgba(${s.tint},0.02))`,
+                                border: `1px solid rgba(${s.tint},0.12)`,
+                            }}
+                        >
                             <HStack gap={4}>
-                                <Box p={3} bg="purple.100" borderRadius="lg" color="purple.600">
-                                    <Icon as={FaRocket} boxSize={6} />
+                                <Box
+                                    p={2.5}
+                                    borderRadius="lg"
+                                    style={{ background: `rgba(${s.tint},0.12)` }}
+                                >
+                                    <Icon as={s.icon} boxSize={5} style={{ color: `rgba(${s.tint},1)` }} />
                                 </Box>
                                 <VStack align="start" gap={0}>
-                                    <Text color="fgMuted" fontSize="sm">Current Streak</Text>
-                                    <Heading size="xl">{stats.streak} Days</Heading>
+                                    <Text color="gray.500" fontSize="xs" fontWeight="500">{s.label}</Text>
+                                    <Heading size="lg" fontWeight="800" letterSpacing="-0.02em">{s.value}</Heading>
                                 </VStack>
                             </HStack>
-                        </Card.Body>
-                    </Card.Root>
+                        </Box>
+                    </MotionBox>
+                ))}
+            </SimpleGrid>
 
-                    <Card.Root variant="elevated" borderLeft="4px solid" borderColor="blue.500">
-                        <Card.Body p={6}>
-                            <HStack gap={4}>
-                                <Box p={3} bg="blue.100" borderRadius="lg" color="blue.600">
-                                    <Icon as={FaCode} boxSize={6} />
-                                </Box>
-                                <VStack align="start" gap={0}>
-                                    <Text color="fgMuted" fontSize="sm">Problems Solved</Text>
-                                    <Heading size="xl">{stats.problemsSolved}</Heading>
-                                </VStack>
-                            </HStack>
-                        </Card.Body>
-                    </Card.Root>
-
-                    <Card.Root variant="elevated" borderLeft="4px solid" borderColor="green.500">
-                        <Card.Body p={6}>
-                            <HStack gap={4}>
-                                <Box p={3} bg="green.100" borderRadius="lg" color="green.600">
-                                    <Icon as={FaBuilding} boxSize={6} />
-                                </Box>
-                                <VStack align="start" gap={0}>
-                                    <Text color="fgMuted" fontSize="sm">Companies Unlocked</Text>
-                                    <Heading size="xl">{stats.companiesUnlocked}</Heading>
-                                </VStack>
-                            </HStack>
-                        </Card.Body>
-                    </Card.Root>
-                </SimpleGrid>
-
-                {/* Features Grid */}
-                <Box mt={8}>
-                    <Heading size="xl" mb={6}>Quick Actions</Heading>
-                    <SimpleGrid columns={{ base: 1, md: 3 }} gap={6}>
-                        {features.map((feature) => (
-                            <Link href={feature.link} key={feature.title} style={{ textDecoration: 'none' }}>
-                                <Card.Root
-                                    variant="outline"
+            {/* Quick Actions */}
+            <Box mt={4}>
+                <Heading size="lg" mb={5} fontWeight="700" letterSpacing="-0.02em">Quick Actions</Heading>
+                <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+                    {features.map((f, i) => (
+                        <MotionBox key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.3 + i * 0.08 } as any} whileHover={{ y: -4 }}>
+                            <Link href={f.link} style={{ textDecoration: 'none' }}>
+                                <Box
                                     h="full"
-                                    _hover={{
-                                        borderColor: feature.color,
-                                        transform: 'translateY(-4px)',
-                                        boxShadow: 'md'
+                                    p={6}
+                                    borderRadius="xl"
+                                    style={{
+                                        background: 'rgba(255,255,255,0.025)',
+                                        border: '1px solid rgba(255,255,255,0.06)',
                                     }}
+                                    _hover={{ borderColor: `rgba(${f.tint},0.3)` }}
                                     transition="all 0.2s"
                                 >
-                                    <Card.Body p={6}>
-                                        <VStack align="start" gap={4} h="full">
-                                            <Box p={3} bg={`${feature.color.split('.')[0]}.50`} borderRadius="xl" color={feature.color}>
-                                                <Icon as={feature.icon} boxSize={6} />
-                                            </Box>
-                                            <VStack align="start" gap={2} flex={1}>
-                                                <Heading size="md">{feature.title}</Heading>
-                                                <Text color="fgMuted" fontSize="sm">
-                                                    {feature.description}
-                                                </Text>
-                                            </VStack>
-                                            <Button width="full" variant="ghost" colorPalette={feature.color.split('.')[0]} justifyContent="space-between">
-                                                {feature.cta} <FaArrowRight />
-                                            </Button>
+                                    <VStack align="start" gap={4} h="full">
+                                        <Box p={2.5} borderRadius="lg" style={{ background: `rgba(${f.tint},0.1)` }}>
+                                            <Icon as={f.icon} boxSize={5} style={{ color: `rgba(${f.tint},1)` }} />
+                                        </Box>
+                                        <VStack align="start" gap={1} flex={1}>
+                                            <Heading size="sm" fontWeight="700">{f.title}</Heading>
+                                            <Text color="gray.500" fontSize="xs">{f.description}</Text>
                                         </VStack>
-                                    </Card.Body>
-                                </Card.Root>
+                                        <HStack color="gray.500" fontSize="xs" fontWeight="600" _hover={{ color: 'white' }}>
+                                            <Text>{f.cta}</Text>
+                                            <FaArrowRight size={10} />
+                                        </HStack>
+                                    </VStack>
+                                </Box>
                             </Link>
-                        ))}
-                    </SimpleGrid>
-                </Box>
-            </VStack>
-        </Container>
+                        </MotionBox>
+                    ))}
+                </SimpleGrid>
+            </Box>
+        </VStack>
     );
 }

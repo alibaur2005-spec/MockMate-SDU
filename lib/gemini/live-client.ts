@@ -16,6 +16,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
     const audioStreamRef = useRef<MediaStream | null>(null);
     const audioNodeRef = useRef<AudioWorkletNode | null>(null);
     const nextPlayTimeRef = useRef<number>(0);
+    const analyserRef = useRef<AnalyserNode | null>(null);
     const recognitionRef = useRef<any>(null);
 
     // Audio Playback
@@ -50,7 +51,11 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
 
             const source = ctx.createBufferSource();
             source.buffer = audioBuffer;
-            source.connect(ctx.destination);
+            if (analyserRef.current) {
+                source.connect(analyserRef.current);
+            } else {
+                source.connect(ctx.destination);
+            }
 
             // Scheduling logic to prevent overlapping chunks
             const currentTime = ctx.currentTime;
@@ -99,6 +104,14 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
             }
             if (audioContextRef.current.state === 'suspended') {
                 await audioContextRef.current.resume();
+            }
+
+            if (!analyserRef.current && audioContextRef.current) {
+                const analyser = audioContextRef.current.createAnalyser();
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.85;
+                analyser.connect(audioContextRef.current.destination);
+                analyserRef.current = analyser;
             }
 
             setLogs(prev => [...prev, { role: 'system', type: 'status', content: 'Fetching token...' }]);
@@ -213,6 +226,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
             wsRef.current = null;
         }
         stopRecording();
+        analyserRef.current = null;
 
         if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
             audioContextRef.current.close();
@@ -373,6 +387,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
         disconnect,
         startRecording,
         stopRecording,
-        sendTextMessage
+        sendTextMessage,
+        getAnalyserNode: useCallback(() => analyserRef.current, [])
     };
 }

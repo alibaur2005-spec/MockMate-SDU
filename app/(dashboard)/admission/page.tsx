@@ -1,177 +1,94 @@
-
 'use client';
 
-import { Box, Container, Heading, Text, VStack, HStack, Progress, Card, SimpleGrid, Badge, Spinner } from '@chakra-ui/react';
+import { Box, Heading, Text, VStack, HStack, Progress, SimpleGrid, Badge, Spinner, Icon } from '@chakra-ui/react';
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState } from 'react';
-import { toaster } from '@/components/ui/toaster';
 import { FaChartLine, FaCheckCircle, FaUniversity } from 'react-icons/fa';
 
-interface AdmissionStats {
-    totalInterviews: number;
-    avgScore: number;
-    probability: number;
-}
+interface AdmissionStats { totalInterviews: number; avgScore: number; probability: number; }
 
 export default function AdmissionPage() {
     const [stats, setStats] = useState<AdmissionStats | null>(null);
     const [loading, setLoading] = useState(true);
     const supabase = createClient();
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
-        const calculateAdmission = async () => {
+        const calc = async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                setLoading(false);
-                return;
-            }
-
-            // Fetch all evaluations
-
-
-            // Optimized query: Get attempts first for user, then evaluations
-            const { data: attempts, error: attemptsError } = await supabase
-                .from('interview_attempts')
-                .select('id, evaluations(score)')
-                .eq('user_id', user.id)
-                .eq('status', 'completed');
-
-            if (attemptsError) {
-                console.error('Error fetching attempts:', JSON.stringify(attemptsError, null, 2), attemptsError);
-                return;
-            }
-
-            let totalScore = 0;
-            let count = 0;
-
-            attempts?.forEach((att: any) => {
-                const evals = Array.isArray(att.evaluations) ? att.evaluations : [att.evaluations];
-                evals.forEach((e: any) => {
-                    if (e && typeof e.score === 'number') {
-                        totalScore += e.score;
-                        count++;
-                    }
-                });
-            });
-
+            if (!user) { setLoading(false); return; }
+            const { data: attempts } = await supabase.from('interview_attempts').select('id, evaluations(score)').eq('user_id', user.id).eq('status', 'completed');
+            let totalScore = 0, count = 0;
+            attempts?.forEach((att: any) => { (Array.isArray(att.evaluations) ? att.evaluations : [att.evaluations]).forEach((e: any) => { if (e && typeof e.score === 'number') { totalScore += e.score; count++; } }); });
             const avgScore = count > 0 ? totalScore / count : 0;
-            // Simple logic: Probability = (Avg Score / 100) * 0.8 + (Count * 0.05) [max 0.2 bonus]
-            let prob = (avgScore / 100) * 0.8;
-            prob += Math.min(count * 0.02, 0.2); // Bonus for experience
-            prob = Math.min(prob, 0.99); // Max 99%
-
-            setStats({
-                totalInterviews: attempts?.length || 0,
-                avgScore: Math.round(avgScore),
-                probability: Math.round(prob * 100)
-            });
+            let prob = (avgScore / 100) * 0.8 + Math.min(count * 0.02, 0.2);
+            prob = Math.min(prob, 0.99);
+            setStats({ totalInterviews: attempts?.length || 0, avgScore: Math.round(avgScore), probability: Math.round(prob * 100) });
             setLoading(false);
         };
-
-        calculateAdmission();
+        calc();
     }, []);
 
-    if (loading) {
-        return (
-            <Container centerContent py={20}>
-                <Spinner size="xl" />
-                <Text mt={4}>Calculating admission chances...</Text>
-            </Container>
-        );
-    }
+    if (loading) return <VStack py={20}><Spinner size="xl" color="gray.500" /><Text mt={4} color="gray.500">Calculating...</Text></VStack>;
+
+    const probColor = (stats?.probability || 0) >= 70 ? '34,197,94' : (stats?.probability || 0) >= 40 ? '234,179,8' : '239,68,68';
 
     return (
-        <Container maxW="container.xl" py={8}>
-            <VStack gap={8} align="stretch">
-                <Box>
-                    <Heading size="2xl" mb={2}>Admission Chances</Heading>
-                    <Text color="fgMuted" fontSize="lg">
-                        AI-powered prediction of your success rate based on interview performance.
-                    </Text>
+        <VStack gap={8} align="stretch">
+            <Box>
+                <Heading size="2xl" fontWeight="800" letterSpacing="-0.03em" mb={2}>Admission Chances</Heading>
+                <Text color="gray.500" fontSize="sm">AI-powered prediction based on your interview performance.</Text>
+            </Box>
+
+            {!stats || stats.totalInterviews === 0 ? (
+                <Box p={10} borderRadius="xl" textAlign="center" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <Heading size="md" fontWeight="700" color="gray.300" mb={2}>Not enough data</Heading>
+                    <Text color="gray.500" fontSize="sm">Complete at least one interview to get a prediction.</Text>
                 </Box>
-
-                {!stats || stats.totalInterviews === 0 ? (
-                    <Box bg="bgSub" p={8} borderRadius="xl" textAlign="center">
-                        <Heading size="md" mb={2}>Not enough data</Heading>
-                        <Text color="fgMuted">Complete at least one interview to get a prediction.</Text>
-                    </Box>
-                ) : (
-                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={8}>
-                        {/* Probability Card */}
-                        <Card.Root variant="elevated" borderTop="4px solid" borderColor={stats.probability >= 70 ? 'green.500' : stats.probability >= 40 ? 'orange.500' : 'red.500'}>
-                            <Card.Body p={6}>
-                                <VStack gap={6}>
-                                    <Heading size="lg">Predicted Success Rate</Heading>
-                                    <Box w="full" px={4}>
-                                        <Progress.Root value={stats.probability} size="lg" colorPalette={stats.probability >= 70 ? 'green' : stats.probability >= 40 ? 'orange' : 'red'}>
-                                            <HStack justify="space-between" mb={2}>
-                                                <Progress.Label>Probability</Progress.Label>
-                                                <Progress.ValueText>{stats.probability}%</Progress.ValueText>
-                                            </HStack>
-                                            <Progress.Track>
-                                                <Progress.Range />
-                                            </Progress.Track>
-                                        </Progress.Root>
-                                    </Box>
-                                    <Text textAlign="center" color="fgMuted">
-                                        Based on your average score of {stats.avgScore}/100 across {stats.totalInterviews} interviews.
-                                    </Text>
-                                    <Badge size="lg" colorPalette={stats.probability >= 70 ? 'green' : 'orange'}>
-                                        {stats.probability >= 70 ? 'High Chance' : stats.probability >= 40 ? 'Moderate Chance' : 'Needs Improvement'}
-                                    </Badge>
-                                </VStack>
-                            </Card.Body>
-                        </Card.Root>
-
-                        {/* Insights Card */}
-                        <VStack gap={4} align="stretch">
-                            <Card.Root variant="outline">
-                                <Card.Body p={6}>
-                                    <HStack gap={4}>
-                                        <Box bg="blue.50" p={3} borderRadius="lg">
-                                            <FaChartLine size={24} color="var(--chakra-colors-blue-500)" />
-                                        </Box>
-                                        <VStack align="start" gap={1}>
-                                            <Text fontSize="sm" color="fgMuted">Average Score</Text>
-                                            <Heading size="md">{stats.avgScore}/100</Heading>
-                                        </VStack>
+            ) : (
+                <SimpleGrid columns={{ base: 1, md: 2 }} gap={6}>
+                    {/* Probability */}
+                    <Box p={7} borderRadius="xl" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', borderTop: `3px solid rgba(${probColor},0.8)` }}>
+                        <VStack gap={6}>
+                            <Heading size="md" fontWeight="700">Predicted Success Rate</Heading>
+                            <Box w="full" px={4}>
+                                <Progress.Root value={stats.probability} size="lg">
+                                    <HStack justify="space-between" mb={2}>
+                                        <Progress.Label fontSize="xs" color="gray.500">Probability</Progress.Label>
+                                        <Progress.ValueText fontSize="sm" fontWeight="700" style={{ color: `rgba(${probColor},1)` }}>{stats.probability}%</Progress.ValueText>
                                     </HStack>
-                                </Card.Body>
-                            </Card.Root>
-
-                            <Card.Root variant="outline">
-                                <Card.Body p={6}>
-                                    <HStack gap={4}>
-                                        <Box bg="purple.50" p={3} borderRadius="lg">
-                                            <FaCheckCircle size={24} color="var(--chakra-colors-purple-500)" />
-                                        </Box>
-                                        <VStack align="start" gap={1}>
-                                            <Text fontSize="sm" color="fgMuted">Mock Interviews Completed</Text>
-                                            <Heading size="md">{stats.totalInterviews}</Heading>
-                                        </VStack>
-                                    </HStack>
-                                </Card.Body>
-                            </Card.Root>
-
-                            <Card.Root variant="outline">
-                                <Card.Body p={6}>
-                                    <HStack gap={4}>
-                                        <Box bg="green.50" p={3} borderRadius="lg">
-                                            <FaUniversity size={24} color="var(--chakra-colors-green-500)" />
-                                        </Box>
-                                        <VStack align="start" gap={1}>
-                                            <Text fontSize="sm" color="fgMuted">Readiness Level</Text>
-                                            <Heading size="md">
-                                                {stats.avgScore >= 80 ? 'Job Ready' : stats.avgScore >= 60 ? 'Practicing' : 'Foundation'}
-                                            </Heading>
-                                        </VStack>
-                                    </HStack>
-                                </Card.Body>
-                            </Card.Root>
+                                    <Progress.Track style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '999px' }}>
+                                        <Progress.Range style={{ background: `rgba(${probColor},0.7)`, borderRadius: '999px' }} />
+                                    </Progress.Track>
+                                </Progress.Root>
+                            </Box>
+                            <Text textAlign="center" color="gray.500" fontSize="xs">Based on {stats.avgScore}/100 avg across {stats.totalInterviews} interviews.</Text>
+                            <Badge px={3} py={1} borderRadius="full" fontSize="xs" fontWeight="700" style={{ background: `rgba(${probColor},0.1)`, color: `rgba(${probColor},1)`, border: `1px solid rgba(${probColor},0.2)` }}>
+                                {stats.probability >= 70 ? 'High Chance' : stats.probability >= 40 ? 'Moderate' : 'Needs Improvement'}
+                            </Badge>
                         </VStack>
-                    </SimpleGrid>
-                )}
-            </VStack>
-        </Container>
+                    </Box>
+
+                    {/* Insights */}
+                    <VStack gap={4} align="stretch">
+                        {[
+                            { label: 'Average Score', value: `${stats.avgScore}/100`, icon: FaChartLine, tint: '86,114,234' },
+                            { label: 'Interviews Completed', value: stats.totalInterviews, icon: FaCheckCircle, tint: '168,85,247' },
+                            { label: 'Readiness Level', value: stats.avgScore >= 80 ? 'Job Ready' : stats.avgScore >= 60 ? 'Practicing' : 'Foundation', icon: FaUniversity, tint: '34,197,94' },
+                        ].map((item, i) => (
+                            <Box key={i} p={5} borderRadius="xl" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                                <HStack gap={4}>
+                                    <Box p={2.5} borderRadius="lg" style={{ background: `rgba(${item.tint},0.1)` }}><Icon as={item.icon} boxSize={5} style={{ color: `rgba(${item.tint},1)` }} /></Box>
+                                    <VStack align="start" gap={0}>
+                                        <Text fontSize="xs" color="gray.500" fontWeight="500">{item.label}</Text>
+                                        <Heading size="sm" fontWeight="700">{item.value}</Heading>
+                                    </VStack>
+                                </HStack>
+                            </Box>
+                        ))}
+                    </VStack>
+                </SimpleGrid>
+            )}
+        </VStack>
     );
 }
