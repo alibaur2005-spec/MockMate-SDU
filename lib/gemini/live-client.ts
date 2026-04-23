@@ -89,9 +89,9 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
         if (response.serverContent?.modelTurn?.parts) {
             const parts = response.serverContent.modelTurn.parts;
             for (const part of parts) {
-                if (part.text) {
-                    setLogs(prev => [...prev, { role: 'ai', type: 'text', content: part.text }]);
-                }
+                // Note: we intentionally drop part.text — with responseModalities=AUDIO,
+                // any text from the model is chain-of-thought / reasoning leakage,
+                // not what the AI actually says aloud.
                 if (part.inlineData && part.inlineData.mimeType.startsWith('audio/')) {
                     playPcmAudio(part.inlineData.data);
                 }

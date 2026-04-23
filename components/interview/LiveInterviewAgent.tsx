@@ -273,17 +273,22 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
 
         setIsSubmitting(true);
         try {
-            const transcript = logs
-                .filter(log => log.role === 'user' || log.role === 'ai')
-                .map(log => `${log.role === 'ai' ? 'Interviewer' : 'Candidate'}: ${log.content}`)
-                .join('\n\n');
+            // Save ONLY the candidate's transcribed speech as the answer.
+            // AI text logs are chain-of-thought reasoning leakage and must not be saved.
+            const candidateTranscript = logs
+                .filter(log => log.role === 'user')
+                .map(log => log.content)
+                .join('\n\n')
+                .trim();
+
+            const answerToSave = candidateTranscript || 'No answer provided';
 
             const { error: updateError } = await supabase
                 .from('interview_attempts')
                 .update({
                     status: 'completed',
                     ended_at: new Date().toISOString(),
-                    answer: transcript || 'No answer provided'
+                    answer: answerToSave
                 })
                 .eq('id', attemptId);
 
@@ -300,7 +305,7 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     attemptId,
-                    answer: transcript || 'No answer provided',
+                    answer: answerToSave,
                     question: { content: questionPrompt || 'General Interview', topic: 'General', difficulty: 'Medium' },
                     company: companyName || 'Unknown Company'
                 })
