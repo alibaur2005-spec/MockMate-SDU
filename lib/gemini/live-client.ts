@@ -18,10 +18,12 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
     const nextPlayTimeRef = useRef<number>(0);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const recognitionRef = useRef<any>(null);
+    const activeSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
+    const isStoppedRef = useRef<boolean>(false);
 
     // Audio Playback
     const playPcmAudio = useCallback((base64Data: string) => {
-        if (!audioContextRef.current) return;
+        if (!audioContextRef.current || isStoppedRef.current) return;
         const ctx = audioContextRef.current;
 
         // Ensure context is running
@@ -67,10 +69,12 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
 
             source.start(nextPlayTimeRef.current);
             nextPlayTimeRef.current += audioBuffer.duration;
+            activeSourcesRef.current.add(source);
 
             setIsAiSpeaking(true);
 
             source.onended = () => {
+                activeSourcesRef.current.delete(source);
                 // If this is the last chunk, mark as not speaking
                 if (ctx.currentTime >= nextPlayTimeRef.current - 0.1) {
                     setIsAiSpeaking(false);
@@ -97,6 +101,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
 
     const connect = useCallback(async () => {
         try {
+            isStoppedRef.current = false;
             // Initialize AudioContext early on user gesture
             if (!audioContextRef.current) {
                 const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -221,19 +226,39 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
     }, []);
 
     const disconnect = useCallback(() => {
+        // 1. Block any new audio from being queued
+        isStoppedRef.current = true;
+
+        // 2. Close WebSocket so server stops sending more chunks
         if (wsRef.current) {
+            try { wsRef.current.onmessage = null; } catch {}
             wsRef.current.close();
             wsRef.current = null;
         }
+
+        // 3. Stop all currently scheduled / playing audio sources immediately
+        activeSourcesRef.current.forEach(src => {
+            try {
+                src.onended = null;
+                src.stop(0);
+                src.disconnect();
+            } catch {}
+        });
+        activeSourcesRef.current.clear();
+
+        // 4. Stop mic recording
         stopRecording();
         analyserRef.current = null;
 
+        // 5. Suspend then close audio context to silence anything in flight
         if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+            try { audioContextRef.current.suspend(); } catch {}
             audioContextRef.current.close();
             audioContextRef.current = null;
         }
         nextPlayTimeRef.current = 0;
         setIsConnected(false);
+        setIsAiSpeaking(false);
     }, [stopRecording]);
 
     // Helper to convert Int16Array to Base64
