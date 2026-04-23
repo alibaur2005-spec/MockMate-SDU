@@ -57,11 +57,6 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
             setCameraActive(true);
         } catch (err) {
             console.error('Camera access denied:', err);
-            toaster.create({
-                title: 'Camera unavailable',
-                description: 'Interview will continue without video.',
-                type: 'warning',
-            });
         }
     }, []);
 
