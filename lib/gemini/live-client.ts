@@ -48,7 +48,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
             const int16Array = new Int16Array(bytes.buffer, 0, Math.floor(bytes.length / 2));
 
             // Buffer AI PCM for caption transcription fallback
-            if (newTurnRef.current) { aiPcmChunksRef.current = []; newTurnRef.current = false; setAiCaption(''); }
+            if (newTurnRef.current) { aiPcmChunksRef.current = []; newTurnRef.current = false; }
             aiPcmChunksRef.current.push(new Int16Array(int16Array));
 
             // Gemini Audio out is PCM 24kHz
@@ -122,8 +122,6 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
             console.log('[caption] transcribe response:', data);
             if (data.transcription?.trim()) {
                 setAiCaption(data.transcription.trim());
-                if (captionTimeoutRef.current) clearTimeout(captionTimeoutRef.current);
-                captionTimeoutRef.current = setTimeout(() => setAiCaption(''), 8000);
             }
         } catch (e) {
             console.error('[caption] transcribe failed:', e);
@@ -305,7 +303,6 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
             audioContextRef.current = null;
         }
         nextPlayTimeRef.current = 0;
-        if (captionTimeoutRef.current) clearTimeout(captionTimeoutRef.current);
         setAiCaption('');
         aiPcmChunksRef.current = [];
         newTurnRef.current = true;

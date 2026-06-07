@@ -484,10 +484,10 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
             {/* Captions */}
             {captionsEnabled && (aiCaption || isCaptioning) && (
                 <Box w="full" px={4} py={3} borderRadius="xl" minH="48px" style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.07)', backdropFilter: 'blur(12px)' }}>
-                    {isCaptioning && !aiCaption ? (
-                        <Text fontSize="sm" color="gray.500" textAlign="center" fontStyle="italic">Transcribing...</Text>
-                    ) : (
+                    {aiCaption ? (
                         <Text fontSize="sm" color="white" textAlign="center" lineHeight="1.6">{aiCaption}</Text>
+                    ) : (
+                        <Text fontSize="sm" color="gray.500" textAlign="center" fontStyle="italic">Transcribing...</Text>
                     )}
                 </Box>
             )}
