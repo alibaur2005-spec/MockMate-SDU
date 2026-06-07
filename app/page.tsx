@@ -485,22 +485,22 @@ export default function Home() {
                         <SimpleGrid columns={{ base: 1, md: 3 }} gap={5} w="full">
                             {[
                                 {
-                                    name: 'Alex Chen',
-                                    role: 'Software Engineer at Google',
-                                    content: "MockMate's AI feedback was incredibly specific and helped me optimize my solutions. The live interview feature built my confidence. Landed the offer!",
-                                    avatar: 'https://bit.ly/dan-abramov',
+                                    name: 'Zhumabekov Bakdaulet',
+                                    role: 'SDU Student',
+                                    content: "I wanted to check myself and try an interview for Google. Questions were as hard as a real Google interview. When I answered that I don't know, the assistant was a bit kinder than a real interview — I think the AI should be more strict. Everything else was good.",
+                                    avatar: '',
                                 },
                                 {
-                                    name: 'Sarah Jones',
-                                    role: 'Frontend Dev at Amazon',
-                                    content: 'The voice interview practice was a game-changer. Being able to practice explaining my approach while coding — exactly what real interviews demand.',
-                                    avatar: 'https://bit.ly/sage-adebayo',
+                                    name: 'Alima Bekbossynova',
+                                    role: 'SDU Student',
+                                    content: "What impressed me most was the depth of the AI feedback. Instead of simply checking whether my solution worked, it provided a complete code review with optimization suggestions, complexity analysis, and interview-focused recommendations. It felt like having a personal mentor available anytime.",
+                                    avatar: '',
                                 },
                                 {
-                                    name: 'Michael Brown',
-                                    role: 'Full Stack at Meta',
-                                    content: 'I went from failing system design rounds to acing them. The structured questions and detailed AI analysis really pinpointed my weak areas.',
-                                    avatar: 'https://bit.ly/kent-c-dodds',
+                                    name: 'Aibatyr Khassenov',
+                                    role: 'SDU Student',
+                                    content: "I tried the Google interview simulation and it was a good experience. The questions were not easy, which I liked. The AI is a bit too friendly sometimes — a real Google interview is more serious. But overall the platform is helpful. Also I can improve my English speaking skills here.",
+                                    avatar: '',
                                 },
                             ].map((t, i) => (
                                 <MotionBox
