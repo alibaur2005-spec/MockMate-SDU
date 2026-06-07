@@ -11,6 +11,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
     const [isAiSpeaking, setIsAiSpeaking] = useState(false);
     const [logs, setLogs] = useState<{ role: string, type: string, content: string }[]>([]);
     const [aiCaption, setAiCaption] = useState('');
+    const [isCaptioning, setIsCaptioning] = useState(false);
 
     const wsRef = useRef<WebSocket | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -114,15 +115,21 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
         const wavBlob = new Blob([buf], { type: 'audio/wav' });
         const formData = new FormData();
         formData.append('file', new File([wavBlob], 'ai.wav', { type: 'audio/wav' }));
+        setIsCaptioning(true);
         try {
             const res = await fetch('/api/transcribe', { method: 'POST', body: formData });
             const data = await res.json();
+            console.log('[caption] transcribe response:', data);
             if (data.transcription?.trim()) {
                 setAiCaption(data.transcription.trim());
                 if (captionTimeoutRef.current) clearTimeout(captionTimeoutRef.current);
-                captionTimeoutRef.current = setTimeout(() => setAiCaption(''), 6000);
+                captionTimeoutRef.current = setTimeout(() => setAiCaption(''), 8000);
             }
-        } catch (e) { /* caption failed silently */ }
+        } catch (e) {
+            console.error('[caption] transcribe failed:', e);
+        } finally {
+            setIsCaptioning(false);
+        }
     }, []);
 
     const handleServerContent = useCallback((response: any) => {
@@ -453,6 +460,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
         isRecording,
         isAiSpeaking,
         aiCaption,
+        isCaptioning,
         logs,
         connect,
         disconnect,

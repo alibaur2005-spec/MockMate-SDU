@@ -19,6 +19,7 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
         isRecording,
         isAiSpeaking,
         aiCaption,
+        isCaptioning,
         logs,
         connect,
         disconnect,
@@ -408,11 +409,6 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
                             <Text fontSize="xs" fontWeight="600" color="#22c55e">Speaking...</Text>
                         </HStack>
                     )}
-                    {captionsEnabled && aiCaption && (
-                        <Box position="absolute" bottom={10} left={3} right={3} px={3} py={2} borderRadius="lg" style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)' }}>
-                            <Text fontSize="sm" color="white" lineHeight="1.5" textAlign="center">{aiCaption}</Text>
-                        </Box>
-                    )}
                 </Box>
 
                 {/* User Camera Panel */}
@@ -484,6 +480,17 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
                     )}
                 </Box>
             </Flex>
+
+            {/* Captions */}
+            {captionsEnabled && (aiCaption || isCaptioning) && (
+                <Box w="full" px={4} py={3} borderRadius="xl" minH="48px" style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.07)', backdropFilter: 'blur(12px)' }}>
+                    {isCaptioning && !aiCaption ? (
+                        <Text fontSize="sm" color="gray.500" textAlign="center" fontStyle="italic">Transcribing...</Text>
+                    ) : (
+                        <Text fontSize="sm" color="white" textAlign="center" lineHeight="1.6">{aiCaption}</Text>
+                    )}
+                </Box>
+            )}
 
             {/* Controls */}
             <HStack justify="center" gap={4} py={2}>
