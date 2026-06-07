@@ -357,11 +357,12 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
                 <Heading size="md">Live AI Interview</Heading>
                 <HStack gap={3}>
                     {companyName && (
-                        <Badge colorPalette="purple" variant="surface">{companyName}</Badge>
+                        <Text px={3} py={1} borderRadius="full" fontSize="xs" fontWeight="600" style={{ background: "rgba(168,85,247,0.12)", color: "#c084fc", border: "1px solid rgba(168,85,247,0.2)" }}>{companyName}</Text>
                     )}
-                    <Badge colorPalette={isConnected ? 'green' : 'gray'} variant="solid">
-                        {isConnected ? 'Live' : 'Offline'}
-                    </Badge>
+                    <HStack gap={1.5} px={3} py={1} borderRadius="full" style={{ background: isConnected ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)', border: isConnected ? '1px solid rgba(34,197,94,0.2)' : '1px solid rgba(255,255,255,0.08)' }}>
+                        <Box w={1.5} h={1.5} borderRadius="full" bg={isConnected ? '#22c55e' : 'gray.600'} />
+                        <Text fontSize="xs" fontWeight="600" color={isConnected ? '#22c55e' : 'gray.500'}>{isConnected ? 'Live' : 'Offline'}</Text>
+                    </HStack>
                 </HStack>
             </HStack>
 
@@ -400,16 +401,10 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
                         AI Interviewer
                     </Text>
                     {isAiSpeaking && (
-                        <Badge
-                            position="absolute"
-                            top={3}
-                            right={3}
-                            colorPalette="green"
-                            variant="solid"
-                            fontSize="xs"
-                        >
-                            Speaking...
-                        </Badge>
+                        <HStack position="absolute" top={3} right={3} gap={1.5} px={2.5} py={1} borderRadius="full" style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.25)', backdropFilter: 'blur(8px)' }}>
+                            <Box w={1.5} h={1.5} borderRadius="full" bg="#22c55e" style={{ boxShadow: '0 0 6px #22c55e' }} />
+                            <Text fontSize="xs" fontWeight="600" color="#22c55e">Speaking...</Text>
+                        </HStack>
                     )}
                 </Box>
 

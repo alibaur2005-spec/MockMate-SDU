@@ -75,7 +75,7 @@ export default function ReviewsListPage() {
                                             ) : <Text fontSize="xs" color="gray.600">—</Text>}
                                         </Table.Cell>
                                         <Table.Cell>
-                                            <Badge px={2.5} py={0.5} borderRadius="full" fontSize="xs" style={{ background: r.status === 'completed' ? 'rgba(34,197,94,0.1)' : 'rgba(86,114,234,0.1)', color: r.status === 'completed' ? '#22c55e' : '#7b98f2' }}>{r.status}</Badge>
+                                            <Badge px={2.5} py={0.5} borderRadius="full" fontSize="xs" style={{ background: r.status === 'completed' ? 'rgba(34,197,94,0.1)' : 'rgba(86,114,234,0.1)', color: r.status === 'completed' ? '#22c55e' : '#7b98f2' }}>{r.status === 'completed' ? 'Completed' : r.status === 'in_progress' ? 'In Progress' : r.status.replace(/_/g, ' ')}</Badge>
                                         </Table.Cell>
                                         <Table.Cell textAlign="right" pr={6}>
                                             <IconButton aria-label="View" variant="ghost" size="sm" color="gray.500" _hover={{ color: 'white' }}><FaEye /></IconButton>

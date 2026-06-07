@@ -156,7 +156,7 @@ export default function TranscriberPage() {
                                         <Badge px={2.5} py={0.5} borderRadius="full" fontSize="xs" style={{ background: `rgba(${statusColor(t.status)},0.1)`, color: `rgba(${statusColor(t.status)},1)` }}>
                                             {t.status === 'processing' && <FaSpinner style={{ display: 'inline', marginRight: '4px' }} />}{t.status.toUpperCase()}
                                         </Badge>
-                                        {t.status === 'completed' && <Button size="xs" variant="outline" onClick={() => { setSelectedTranscription(t); setIsModalOpen(true); }} borderColor="rgba(255,255,255,0.08)" color="gray.400" borderRadius="lg" _hover={{ bg: 'rgba(255,255,255,0.04)' }}><FaEye style={{ marginRight: '4px' }} /> View</Button>}
+                                        {t.status === 'completed' && <Button size="xs" variant="outline" px={4} onClick={() => { setSelectedTranscription(t); setIsModalOpen(true); }} borderColor="rgba(255,255,255,0.08)" color="gray.400" borderRadius="lg" _hover={{ bg: 'rgba(255,255,255,0.04)' }}><FaEye style={{ marginRight: '4px' }} /> View</Button>}
                                         <IconButton size="xs" variant="ghost" color="gray.600" onClick={(e) => deleteTranscription(t.id, e)} aria-label="Delete" _hover={{ color: '#ef4444' }}><FaTrash /></IconButton>
                                     </HStack>
                                 </HStack>
