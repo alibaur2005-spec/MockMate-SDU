@@ -472,12 +472,12 @@ export default function Home() {
                         <VStack gap={4} textAlign="center" maxW="2xl" mx="auto">
                             <MotionBox initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
                                 <Text fontSize="xs" fontWeight="700" color="#a855f7" letterSpacing="0.14em" textTransform="uppercase">
-                                    Testimonials
+                                    User Feedback
                                 </Text>
                             </MotionBox>
                             <MotionBox initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 } as any}>
                                 <Heading fontSize={{ base: '3xl', md: '4xl' }} fontWeight="800" letterSpacing="-0.03em">
-                                    Trusted by developers worldwide
+                                    What our users are saying
                                 </Heading>
                             </MotionBox>
                         </VStack>
