@@ -8,7 +8,9 @@ import CompanyCard from '@/components/companies/CompanyCard';
 import { useAdmin } from '@/lib/auth/hooks';
 import { FaUpload } from 'react-icons/fa';
 
-interface Company { id: string; name: string; description: string; logo_url: string; }
+interface Company { id: string; name: string; description: string; logo_url: string; category: string; }
+
+const CATEGORY_ORDER = ['Big Tech', 'KZ Companies', 'Big 4', 'Other'];
 
 export default function CompaniesPage() {
     const [companies, setCompanies] = useState<Company[]>([]);
@@ -19,6 +21,7 @@ export default function CompaniesPage() {
     const [showAddForm, setShowAddForm] = useState(false);
     const [newName, setNewName] = useState('');
     const [newDescription, setNewDescription] = useState('');
+    const [newCategory, setNewCategory] = useState('Other');
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState('');
     const [isAdding, setIsAdding] = useState(false);
@@ -66,7 +69,7 @@ export default function CompaniesPage() {
 
         const { data, error } = await supabase
             .from('companies')
-            .insert({ name: newName.trim(), description: newDescription.trim(), logo_url: logoUrl })
+            .insert({ name: newName.trim(), description: newDescription.trim(), logo_url: logoUrl, category: newCategory })
             .select().single();
         setIsAdding(false);
 
@@ -74,17 +77,23 @@ export default function CompaniesPage() {
         else {
             setCompanies(prev => [data, ...prev]);
             setShowAddForm(false);
-            setNewName(''); setNewDescription(''); setLogoFile(null); setLogoPreview('');
+            setNewName(''); setNewDescription(''); setLogoFile(null); setLogoPreview(''); setNewCategory('Other');
             toaster.create({ title: 'Company added', type: 'success' });
         }
     };
 
     const resetForm = () => {
         setShowAddForm(false);
-        setNewName(''); setNewDescription(''); setLogoFile(null); setLogoPreview('');
+        setNewName(''); setNewDescription(''); setLogoFile(null); setLogoPreview(''); setNewCategory('Other');
     };
 
     const inputStyle = { bg: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)', color: 'white', _hover: { borderColor: 'rgba(255,255,255,0.15)' }, _focus: { borderColor: '#5672ea', boxShadow: '0 0 0 1px #5672ea' }, _placeholder: { color: 'gray.600' } };
+
+    const grouped = CATEGORY_ORDER.reduce<Record<string, Company[]>>((acc, cat) => {
+        const list = companies.filter(c => (c.category || 'Other') === cat);
+        if (list.length > 0) acc[cat] = list;
+        return acc;
+    }, {});
 
     return (
         <VStack gap={8} align="stretch">
@@ -105,7 +114,6 @@ export default function CompaniesPage() {
                     <VStack align="stretch" gap={4}>
                         <Heading size="sm" fontWeight="700">New Company</Heading>
 
-                        {/* Logo upload */}
                         <Box>
                             <Text mb={2} fontSize="xs" fontWeight="500" color="gray.400">Logo</Text>
                             <HStack gap={4}>
@@ -133,6 +141,16 @@ export default function CompaniesPage() {
                                 <Text mb={1} fontSize="xs" fontWeight="500" color="gray.400">Name *</Text>
                                 <Input placeholder="e.g. Google" value={newName} onChange={(e) => setNewName(e.target.value)} borderRadius="lg" {...inputStyle} />
                             </Box>
+                            <Box flex={1} w="full">
+                                <Text mb={1} fontSize="xs" fontWeight="500" color="gray.400">Category</Text>
+                                <select
+                                    value={newCategory}
+                                    onChange={(e) => setNewCategory(e.target.value)}
+                                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'white', fontSize: '14px' }}
+                                >
+                                    {CATEGORY_ORDER.map(cat => <option key={cat} value={cat} style={{ background: '#1a1a2e' }}>{cat}</option>)}
+                                </select>
+                            </Box>
                         </HStack>
                         <Box>
                             <Text mb={1} fontSize="xs" fontWeight="500" color="gray.400">Description</Text>
@@ -153,9 +171,21 @@ export default function CompaniesPage() {
                     <Text color="gray.500">No companies found.</Text>
                 </VStack>
             ) : (
-                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={5}>
-                    {companies.map((company) => <CompanyCard key={company.id} {...company} />)}
-                </SimpleGrid>
+                <VStack gap={10} align="stretch">
+                    {Object.entries(grouped).map(([category, list]) => (
+                        <Box key={category}>
+                            <HStack gap={3} mb={5} align="center">
+                                <Heading size="md" fontWeight="700" color="white">{category}</Heading>
+                                <Box px={2} py={0.5} borderRadius="full" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                    <Text fontSize="xs" color="gray.500">{list.length}</Text>
+                                </Box>
+                            </HStack>
+                            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={5}>
+                                {list.map((company) => <CompanyCard key={company.id} {...company} />)}
+                            </SimpleGrid>
+                        </Box>
+                    ))}
+                </VStack>
             )}
         </VStack>
     );
