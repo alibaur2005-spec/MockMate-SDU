@@ -10,6 +10,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
     const [isRecording, setIsRecording] = useState(false);
     const [isAiSpeaking, setIsAiSpeaking] = useState(false);
     const [logs, setLogs] = useState<{ role: string, type: string, content: string }[]>([]);
+    const [aiCaption, setAiCaption] = useState('');
 
     const wsRef = useRef<WebSocket | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -20,6 +21,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
     const recognitionRef = useRef<any>(null);
     const activeSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
     const isStoppedRef = useRef<boolean>(false);
+    const captionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Audio Playback
     const playPcmAudio = useCallback((base64Data: string) => {
@@ -86,16 +88,20 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
     }, []);
 
     const handleServerContent = useCallback((response: any) => {
+        if (response.serverContent?.outputTranscription?.text) {
+            if (captionTimeoutRef.current) clearTimeout(captionTimeoutRef.current);
+            setAiCaption(prev => prev + response.serverContent.outputTranscription.text);
+        }
         if (response.serverContent?.modelTurn?.parts) {
             const parts = response.serverContent.modelTurn.parts;
             for (const part of parts) {
-                // Note: we intentionally drop part.text — with responseModalities=AUDIO,
-                // any text from the model is chain-of-thought / reasoning leakage,
-                // not what the AI actually says aloud.
                 if (part.inlineData && part.inlineData.mimeType.startsWith('audio/')) {
                     playPcmAudio(part.inlineData.data);
                 }
             }
+        }
+        if (response.serverContent?.turnComplete) {
+            captionTimeoutRef.current = setTimeout(() => setAiCaption(''), 4000);
         }
     }, [playPcmAudio]);
 
@@ -141,6 +147,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
                         model: "models/gemini-2.5-flash-native-audio-latest",
                         generationConfig: {
                             responseModalities: ["AUDIO"],
+                            outputAudioTranscription: {},
                             speechConfig: {
                                 voiceConfig: {
                                     prebuiltVoiceConfig: {
@@ -257,6 +264,8 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
             audioContextRef.current = null;
         }
         nextPlayTimeRef.current = 0;
+        if (captionTimeoutRef.current) clearTimeout(captionTimeoutRef.current);
+        setAiCaption('');
         setIsConnected(false);
         setIsAiSpeaking(false);
     }, [stopRecording]);
@@ -407,6 +416,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
         isConnected,
         isRecording,
         isAiSpeaking,
+        aiCaption,
         logs,
         connect,
         disconnect,

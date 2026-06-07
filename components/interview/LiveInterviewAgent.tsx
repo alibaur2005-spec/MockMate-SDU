@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Button, VStack, HStack, Text, Heading, Badge, IconButton, Icon, Flex } from '@chakra-ui/react';
-import { FaMicrophone, FaMicrophoneSlash, FaPlay, FaStop, FaVideo, FaVideoSlash } from 'react-icons/fa';
+import { FaMicrophone, FaMicrophoneSlash, FaPlay, FaStop, FaVideo, FaVideoSlash, FaClosedCaptioning } from 'react-icons/fa';
 import { useGeminiLiveClient } from '@/lib/gemini/live-client';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -18,6 +18,7 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
         isConnected,
         isRecording,
         isAiSpeaking,
+        aiCaption,
         logs,
         connect,
         disconnect,
@@ -29,6 +30,7 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
     const [isClient, setIsClient] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [cameraActive, setCameraActive] = useState(false);
+    const [captionsEnabled, setCaptionsEnabled] = useState(true);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const cameraStreamRef = useRef<MediaStream | null>(null);
@@ -406,6 +408,11 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
                             <Text fontSize="xs" fontWeight="600" color="#22c55e">Speaking...</Text>
                         </HStack>
                     )}
+                    {captionsEnabled && aiCaption && (
+                        <Box position="absolute" bottom={10} left={3} right={3} px={3} py={2} borderRadius="lg" style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)' }}>
+                            <Text fontSize="sm" color="white" lineHeight="1.5" textAlign="center">{aiCaption}</Text>
+                        </Box>
+                    )}
                 </Box>
 
                 {/* User Camera Panel */}
@@ -524,6 +531,17 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
                     variant={cameraActive ? 'solid' : 'outline'}
                 >
                     {cameraActive ? <FaVideo /> : <FaVideoSlash />}
+                </IconButton>
+
+                <IconButton
+                    aria-label="Toggle Captions"
+                    size="lg"
+                    borderRadius="full"
+                    onClick={() => setCaptionsEnabled(p => !p)}
+                    variant={captionsEnabled ? 'solid' : 'outline'}
+                    style={captionsEnabled ? { background: 'rgba(86,114,234,0.2)', color: '#7b98f2', border: '1px solid rgba(86,114,234,0.3)' } : { border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.4)' }}
+                >
+                    <FaClosedCaptioning />
                 </IconButton>
             </HStack>
 
