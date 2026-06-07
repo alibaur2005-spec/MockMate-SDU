@@ -22,6 +22,8 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
     const activeSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
     const isStoppedRef = useRef<boolean>(false);
     const captionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const aiPcmChunksRef = useRef<Int16Array[]>([]);
+    const newTurnRef = useRef<boolean>(true);
 
     // Audio Playback
     const playPcmAudio = useCallback((base64Data: string) => {
@@ -43,6 +45,10 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
 
             // Convert to Int16, safely handling odd lengths
             const int16Array = new Int16Array(bytes.buffer, 0, Math.floor(bytes.length / 2));
+
+            // Buffer AI PCM for caption transcription
+            if (newTurnRef.current) { aiPcmChunksRef.current = []; newTurnRef.current = false; }
+            aiPcmChunksRef.current.push(new Int16Array(int16Array));
 
             // Gemini Audio out is PCM 24kHz
             const audioBuffer = ctx.createBuffer(1, int16Array.length, 24000);
@@ -87,27 +93,52 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
         }
     }, []);
 
+    const transcribeAiAudio = useCallback(async () => {
+        const chunks = aiPcmChunksRef.current;
+        if (chunks.length === 0) return;
+        const totalLen = chunks.reduce((s, c) => s + c.length, 0);
+        const combined = new Int16Array(totalLen);
+        let off = 0;
+        for (const c of chunks) { combined.set(c, off); off += c.length; }
+        const sampleRate = 24000;
+        const buf = new ArrayBuffer(44 + combined.length * 2);
+        const v = new DataView(buf);
+        const ws = (o: number, s: string) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+        ws(0, 'RIFF'); v.setUint32(4, 36 + combined.length * 2, true);
+        ws(8, 'WAVE'); ws(12, 'fmt '); v.setUint32(16, 16, true);
+        v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+        v.setUint32(24, sampleRate, true); v.setUint32(28, sampleRate * 2, true);
+        v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+        ws(36, 'data'); v.setUint32(40, combined.length * 2, true);
+        for (let i = 0; i < combined.length; i++) v.setInt16(44 + i * 2, combined[i], true);
+        const wavBlob = new Blob([buf], { type: 'audio/wav' });
+        const formData = new FormData();
+        formData.append('file', new File([wavBlob], 'ai.wav', { type: 'audio/wav' }));
+        try {
+            const res = await fetch('/api/transcribe', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.transcription?.trim()) {
+                setAiCaption(data.transcription.trim());
+                if (captionTimeoutRef.current) clearTimeout(captionTimeoutRef.current);
+                captionTimeoutRef.current = setTimeout(() => setAiCaption(''), 6000);
+            }
+        } catch (e) { /* caption failed silently */ }
+    }, []);
+
     const handleServerContent = useCallback((response: any) => {
         if (response.serverContent?.modelTurn?.parts) {
             const parts = response.serverContent.modelTurn.parts;
-            let hasNewText = false;
             for (const part of parts) {
                 if (part.inlineData && part.inlineData.mimeType.startsWith('audio/')) {
                     playPcmAudio(part.inlineData.data);
                 }
-                if (part.text) {
-                    if (!hasNewText) {
-                        if (captionTimeoutRef.current) clearTimeout(captionTimeoutRef.current);
-                        hasNewText = true;
-                    }
-                    setAiCaption(prev => prev + part.text);
-                }
             }
         }
         if (response.serverContent?.turnComplete) {
-            captionTimeoutRef.current = setTimeout(() => setAiCaption(''), 5000);
+            newTurnRef.current = true;
+            transcribeAiAudio();
         }
-    }, [playPcmAudio]);
+    }, [playPcmAudio, transcribeAiAudio]);
 
     const connect = useCallback(async () => {
         try {
@@ -150,7 +181,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
                     setup: {
                         model: "models/gemini-2.5-flash-native-audio-latest",
                         generationConfig: {
-                            responseModalities: ["AUDIO", "TEXT"],
+                            responseModalities: ["AUDIO"],
                             speechConfig: {
                                 voiceConfig: {
                                     prebuiltVoiceConfig: {
@@ -269,6 +300,8 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
         nextPlayTimeRef.current = 0;
         if (captionTimeoutRef.current) clearTimeout(captionTimeoutRef.current);
         setAiCaption('');
+        aiPcmChunksRef.current = [];
+        newTurnRef.current = true;
         setIsConnected(false);
         setIsAiSpeaking(false);
     }, [stopRecording]);
