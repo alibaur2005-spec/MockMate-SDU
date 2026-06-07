@@ -88,20 +88,24 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
     }, []);
 
     const handleServerContent = useCallback((response: any) => {
-        if (response.serverContent?.outputTranscription?.text) {
-            if (captionTimeoutRef.current) clearTimeout(captionTimeoutRef.current);
-            setAiCaption(prev => prev + response.serverContent.outputTranscription.text);
-        }
         if (response.serverContent?.modelTurn?.parts) {
             const parts = response.serverContent.modelTurn.parts;
+            let hasNewText = false;
             for (const part of parts) {
                 if (part.inlineData && part.inlineData.mimeType.startsWith('audio/')) {
                     playPcmAudio(part.inlineData.data);
                 }
+                if (part.text) {
+                    if (!hasNewText) {
+                        if (captionTimeoutRef.current) clearTimeout(captionTimeoutRef.current);
+                        hasNewText = true;
+                    }
+                    setAiCaption(prev => prev + part.text);
+                }
             }
         }
         if (response.serverContent?.turnComplete) {
-            captionTimeoutRef.current = setTimeout(() => setAiCaption(''), 4000);
+            captionTimeoutRef.current = setTimeout(() => setAiCaption(''), 5000);
         }
     }, [playPcmAudio]);
 
@@ -146,8 +150,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
                     setup: {
                         model: "models/gemini-2.5-flash-native-audio-latest",
                         generationConfig: {
-                            responseModalities: ["AUDIO"],
-                            outputAudioTranscription: {},
+                            responseModalities: ["AUDIO", "TEXT"],
                             speechConfig: {
                                 voiceConfig: {
                                     prebuiltVoiceConfig: {
