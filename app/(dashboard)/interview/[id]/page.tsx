@@ -20,8 +20,16 @@ export default function InterviewPage({ params }: { params: Promise<{ id: string
     const [isRecording, setIsRecording] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     const baseAnswerRef = useRef('');
+
+    useEffect(() => {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => { streamRef.current = stream; })
+            .catch(() => {});
+        return () => { streamRef.current?.getTracks().forEach(t => t.stop()); };
+    }, []);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
@@ -36,14 +44,17 @@ export default function InterviewPage({ params }: { params: Promise<{ id: string
 
     const startRecording = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            if (!streamRef.current || streamRef.current.getTracks().some(t => t.readyState === 'ended')) {
+                streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+            }
+            const stream = streamRef.current;
             const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/ogg';
             const mediaRecorder = new MediaRecorder(stream, { mimeType });
             mediaRecorderRef.current = mediaRecorder;
             chunksRef.current = [];
             baseAnswerRef.current = answer;
             mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-            mediaRecorder.onstop = async () => { const audioBlob = new Blob(chunksRef.current, { type: mimeType }); const file = new File([audioBlob], 'voice_answer.webm', { type: mimeType }); stream.getTracks().forEach(track => track.stop()); await transcribeAudio(file); };
+            mediaRecorder.onstop = async () => { const audioBlob = new Blob(chunksRef.current, { type: mimeType }); const file = new File([audioBlob], 'voice_answer.webm', { type: mimeType }); await transcribeAudio(file); };
             mediaRecorder.start();
             setIsRecording(true);
         } catch (err: any) { toaster.create({ title: 'Microphone access denied', type: 'error' }); }
