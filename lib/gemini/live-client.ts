@@ -46,8 +46,8 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
             // Convert to Int16, safely handling odd lengths
             const int16Array = new Int16Array(bytes.buffer, 0, Math.floor(bytes.length / 2));
 
-            // Buffer AI PCM for caption transcription
-            if (newTurnRef.current) { aiPcmChunksRef.current = []; newTurnRef.current = false; }
+            // Buffer AI PCM for caption transcription fallback
+            if (newTurnRef.current) { aiPcmChunksRef.current = []; newTurnRef.current = false; setAiCaption(''); }
             aiPcmChunksRef.current.push(new Int16Array(int16Array));
 
             // Gemini Audio out is PCM 24kHz
@@ -126,6 +126,11 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
     }, []);
 
     const handleServerContent = useCallback((response: any) => {
+        // Real-time caption from outputAudioTranscription
+        if (response.serverContent?.outputTranscription?.text) {
+            if (captionTimeoutRef.current) clearTimeout(captionTimeoutRef.current);
+            setAiCaption(prev => prev + response.serverContent.outputTranscription.text);
+        }
         if (response.serverContent?.modelTurn?.parts) {
             const parts = response.serverContent.modelTurn.parts;
             for (const part of parts) {
@@ -136,7 +141,12 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
         }
         if (response.serverContent?.turnComplete) {
             newTurnRef.current = true;
-            transcribeAiAudio();
+            // If no real-time transcription arrived, fall back to WAV transcription
+            if (!response.serverContent?.outputTranscription?.text) {
+                transcribeAiAudio();
+            } else {
+                captionTimeoutRef.current = setTimeout(() => setAiCaption(''), 6000);
+            }
         }
     }, [playPcmAudio, transcribeAiAudio]);
 
@@ -182,10 +192,11 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
                         model: "models/gemini-2.5-flash-native-audio-latest",
                         generationConfig: {
                             responseModalities: ["AUDIO"],
+                            outputAudioTranscription: {},
                             speechConfig: {
                                 voiceConfig: {
                                     prebuiltVoiceConfig: {
-                                        voiceName: "Aoede" // Pick voice
+                                        voiceName: "Aoede"
                                     }
                                 }
                             }
