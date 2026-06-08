@@ -524,7 +524,7 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
                     size="xl"
                     borderRadius="full"
                     disabled={!isConnected || isAiSpeaking}
-                    onClick={isRecording ? () => { stopRecording(); resetCaption(); } : startRecording}
+                    onClick={isRecording ? stopRecording : startRecording}
                     variant={isRecording ? 'solid' : 'outline'}
                 >
                     {isRecording ? <FaMicrophone /> : <FaMicrophoneSlash />}

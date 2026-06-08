@@ -48,7 +48,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
             const int16Array = new Int16Array(bytes.buffer, 0, Math.floor(bytes.length / 2));
 
             // Buffer AI PCM for caption transcription fallback
-            if (newTurnRef.current) { aiPcmChunksRef.current = []; newTurnRef.current = false; }
+            if (newTurnRef.current) { aiPcmChunksRef.current = []; newTurnRef.current = false; setAiCaption(''); setIsCaptioning(true); }
             aiPcmChunksRef.current.push(new Int16Array(int16Array));
 
             // Gemini Audio out is PCM 24kHz
