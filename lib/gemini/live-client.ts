@@ -164,15 +164,21 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
         let off = 0;
         for (const c of chunks) { combined.set(c, off); off += c.length; }
         userPcmChunksRef.current = []; // clear immediately so next turn starts fresh
+        const durationSec = (totalLen / 16000).toFixed(1);
+        console.log(`[user-flush] ${chunks.length} chunks, ${durationSec}s audio`);
         const wav = buildWav(combined, 16000);
         const formData = new FormData();
         formData.append('file', new File([wav], 'user.wav', { type: 'audio/wav' }));
         try {
             const res = await fetch('/api/transcribe', { method: 'POST', body: formData });
             const data = await res.json();
+            console.log(`[user-flush] response ok=${res.ok}`, data);
             const text = data.transcription?.trim();
             if (text) {
                 userTranscriptRef.current += (userTranscriptRef.current ? '\n\n' : '') + text;
+                console.log(`[user-flush] transcript now: "${userTranscriptRef.current.slice(0, 80)}..."`);
+            } else if (!res.ok) {
+                console.error('[user-flush] API error:', data.error);
             }
         } catch (e) {
             console.error('[user transcript] flush failed:', e);
@@ -184,8 +190,8 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
 
     // Returns accumulated transcript from all prior flushes
     const transcribeUserAudio = useCallback(async (): Promise<string> => {
-        // Flush any remaining buffered audio (last partial segment)
-        await flushUserAudio();
+        await flushUserAudio(); // flush any remaining (last turn not yet flushed)
+        console.log(`[user-transcript] final: "${userTranscriptRef.current.slice(0, 120)}"`);
         return userTranscriptRef.current;
     }, [flushUserAudio]);
 
