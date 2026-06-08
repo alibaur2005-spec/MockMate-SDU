@@ -143,9 +143,11 @@ export default function InterviewPage({ params }: { params: Promise<{ id: string
                         borderRadius="lg"
                         fontWeight="600"
                         size="sm"
+                        px={4}
+                        gap={2}
                         {...(isRecording ? { bg: '#ef4444', color: 'white', _hover: { bg: '#dc2626' } } : { variant: 'outline', borderColor: 'rgba(255,255,255,0.08)', color: 'gray.400', _hover: { bg: 'rgba(255,255,255,0.04)' } })}
                     >
-                        {isRecording ? <><FaStop style={{ marginRight: '6px' }} /> Stop</> : <><FaMicrophone style={{ marginRight: '6px' }} /> Record</>}
+                        {isRecording ? <><FaStop /> Stop</> : <><FaMicrophone /> Record</>}
                     </Button>
                     <HStack>
                         <Button variant="ghost" onClick={() => router.back()} color="gray.500" size="sm" px={4}>Cancel</Button>
