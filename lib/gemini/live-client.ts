@@ -27,6 +27,8 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
     const newTurnRef = useRef<boolean>(true);
     const userPcmChunksRef = useRef<Int16Array[]>([]);
     const userTranscriptRef = useRef<string>('');
+    // Ref so playPcmAudio can call flushUserAudio without circular useCallback deps
+    const flushUserAudioRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
     // Audio Playback
     const playPcmAudio = useCallback((base64Data: string) => {
@@ -50,7 +52,14 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
             const int16Array = new Int16Array(bytes.buffer, 0, Math.floor(bytes.length / 2));
 
             // Buffer AI PCM for caption transcription fallback
-            if (newTurnRef.current) { aiPcmChunksRef.current = []; newTurnRef.current = false; setAiCaption(''); setIsCaptioning(true); }
+            if (newTurnRef.current) {
+                aiPcmChunksRef.current = [];
+                newTurnRef.current = false;
+                setAiCaption('');
+                setIsCaptioning(true);
+                // AI starting new turn = user just finished speaking → auto-flush user audio
+                flushUserAudioRef.current();
+            }
             aiPcmChunksRef.current.push(new Int16Array(int16Array));
 
             // Gemini Audio out is PCM 24kHz
@@ -169,6 +178,9 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
             console.error('[user transcript] flush failed:', e);
         }
     }, [buildWav]);
+
+    // Keep ref in sync so playPcmAudio can call it without circular deps
+    flushUserAudioRef.current = flushUserAudio;
 
     // Returns accumulated transcript from all prior flushes
     const transcribeUserAudio = useCallback(async (): Promise<string> => {
