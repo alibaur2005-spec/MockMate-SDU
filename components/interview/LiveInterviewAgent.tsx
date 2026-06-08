@@ -293,11 +293,11 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
                 .trim();
 
             const answerForEvaluation = pcmTranscript || logTranscript || 'No answer provided';
-            // Build display transcript: interleave AI turns from logs + user's PCM answer
-            const aiLogs = logs.filter(l => l.role === 'ai');
-            const formattedAi = formatInterviewTranscript(aiLogs);
-            const userSection = pcmTranscript ? `You: ${pcmTranscript}` : '';
-            const answerToSave = [formattedAi, userSection].filter(Boolean).join('\n\n') || answerForEvaluation;
+            // Build display transcript in original chronological order, with user and AI turns interleaved.
+            const formattedTranscript = formatInterviewTranscript(logs);
+            const hasUserLogs = logs.some((log) => log.role === 'user');
+            const userSection = pcmTranscript && !hasUserLogs ? `You: ${pcmTranscript}` : '';
+            const answerToSave = [formattedTranscript, userSection].filter(Boolean).join('\n\n') || answerForEvaluation;
 
             const { error: updateError } = await supabase
                 .from('interview_attempts')
