@@ -25,6 +25,7 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
         disconnect,
         startRecording,
         stopRecording,
+        resetCaption,
         getAnalyserNode
     } = useGeminiLiveClient({ systemInstruction: systemPrompt });
 
@@ -523,7 +524,7 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
                     size="xl"
                     borderRadius="full"
                     disabled={!isConnected || isAiSpeaking}
-                    onClick={isRecording ? stopRecording : startRecording}
+                    onClick={isRecording ? () => { stopRecording(); resetCaption(); } : startRecording}
                     variant={isRecording ? 'solid' : 'outline'}
                 >
                     {isRecording ? <FaMicrophone /> : <FaMicrophoneSlash />}

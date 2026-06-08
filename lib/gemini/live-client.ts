@@ -452,6 +452,11 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
         };
     }, [disconnect]);
 
+    const resetCaption = useCallback(() => {
+        setAiCaption('');
+        setIsCaptioning(true);
+    }, []);
+
     return {
         isConnected,
         isRecording,
@@ -463,6 +468,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
         disconnect,
         startRecording,
         stopRecording,
+        resetCaption,
         sendTextMessage,
         getAnalyserNode: useCallback(() => analyserRef.current, [])
     };
