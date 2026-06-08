@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { toaster } from '@/components/ui/toaster';
+import { formatInterviewTranscript } from '@/lib/interview/transcript';
 
 const MotionBox = motion(Box);
 
@@ -291,7 +292,9 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
                 .join('\n\n')
                 .trim();
 
-            const answerToSave = pcmTranscript || logTranscript || 'No answer provided';
+            const answerForEvaluation = pcmTranscript || logTranscript || 'No answer provided';
+            const formattedTranscript = formatInterviewTranscript(logs);
+            const answerToSave = formattedTranscript || answerForEvaluation;
 
             const { error: updateError } = await supabase
                 .from('interview_attempts')
@@ -315,7 +318,7 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     attemptId,
-                    answer: answerToSave,
+                    answer: answerForEvaluation,
                     question: { content: questionPrompt || 'General Interview', topic: 'General', difficulty: 'Medium' },
                     company: companyName || 'Unknown Company'
                 })

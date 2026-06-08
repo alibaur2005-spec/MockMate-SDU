@@ -136,7 +136,9 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
             const data = await res.json();
             console.log('[caption] transcribe response:', data);
             if (data.transcription?.trim()) {
-                setAiCaption(data.transcription.trim());
+                const transcript = data.transcription.trim();
+                setAiCaption(transcript);
+                setLogs(prev => [...prev, { role: 'ai', type: 'text', content: transcript }]);
             }
         } catch (e) {
             console.error('[caption] transcribe failed:', e);
