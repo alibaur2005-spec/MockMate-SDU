@@ -112,6 +112,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
     const transcribeAiAudio = useCallback(async () => {
         const chunks = aiPcmChunksRef.current;
         if (chunks.length === 0) return;
+        aiPcmChunksRef.current = []; // clear immediately — prevents duplicate if turnComplete fires twice
         const totalLen = chunks.reduce((s, c) => s + c.length, 0);
         const combined = new Int16Array(totalLen);
         let off = 0;
