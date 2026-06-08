@@ -26,6 +26,7 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
         startRecording,
         stopRecording,
         resetCaption,
+        transcribeUserAudio,
         getAnalyserNode
     } = useGeminiLiveClient({ systemInstruction: systemPrompt });
 
@@ -267,25 +268,29 @@ export function LiveInterviewAgent({ attemptId, companyName, role, questionPromp
 
     // --- End interview ---
     const handleEndInterview = async () => {
-        disconnect();
-        stopCamera();
-
-        if (!attemptId || logs.length === 0) {
+        if (!attemptId) {
+            disconnect();
+            stopCamera();
             router.push('/dashboard');
             return;
         }
 
         setIsSubmitting(true);
         try {
-            // Save ONLY the candidate's transcribed speech as the answer.
-            // AI text logs are chain-of-thought reasoning leakage and must not be saved.
-            const candidateTranscript = logs
+            // Transcribe user PCM BEFORE disconnect (clears buffer)
+            const pcmTranscript = await transcribeUserAudio();
+
+            disconnect();
+            stopCamera();
+
+            // Fallback: SpeechRecognition logs (less reliable but kept as safety net)
+            const logTranscript = logs
                 .filter(log => log.role === 'user')
                 .map(log => log.content)
                 .join('\n\n')
                 .trim();
 
-            const answerToSave = candidateTranscript || 'No answer provided';
+            const answerToSave = pcmTranscript || logTranscript || 'No answer provided';
 
             const { error: updateError } = await supabase
                 .from('interview_attempts')

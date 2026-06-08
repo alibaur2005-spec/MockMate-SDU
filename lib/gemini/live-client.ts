@@ -25,6 +25,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
     const captionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const aiPcmChunksRef = useRef<Int16Array[]>([]);
     const newTurnRef = useRef<boolean>(true);
+    const userPcmChunksRef = useRef<Int16Array[]>([]);
 
     // Audio Playback
     const playPcmAudio = useCallback((base64Data: string) => {
@@ -127,6 +128,37 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
             console.error('[caption] transcribe failed:', e);
         } finally {
             setIsCaptioning(false);
+        }
+    }, []);
+
+    const transcribeUserAudio = useCallback(async (): Promise<string> => {
+        const chunks = userPcmChunksRef.current;
+        if (chunks.length === 0) return '';
+        const totalLen = chunks.reduce((s, c) => s + c.length, 0);
+        const combined = new Int16Array(totalLen);
+        let off = 0;
+        for (const c of chunks) { combined.set(c, off); off += c.length; }
+        const sampleRate = 16000;
+        const buf = new ArrayBuffer(44 + combined.length * 2);
+        const v = new DataView(buf);
+        const ws = (o: number, s: string) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+        ws(0, 'RIFF'); v.setUint32(4, 36 + combined.length * 2, true);
+        ws(8, 'WAVE'); ws(12, 'fmt '); v.setUint32(16, 16, true);
+        v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+        v.setUint32(24, sampleRate, true); v.setUint32(28, sampleRate * 2, true);
+        v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+        ws(36, 'data'); v.setUint32(40, combined.length * 2, true);
+        for (let i = 0; i < combined.length; i++) v.setInt16(44 + i * 2, combined[i], true);
+        const wavBlob = new Blob([buf], { type: 'audio/wav' });
+        const formData = new FormData();
+        formData.append('file', new File([wavBlob], 'user.wav', { type: 'audio/wav' }));
+        try {
+            const res = await fetch('/api/transcribe', { method: 'POST', body: formData });
+            const data = await res.json();
+            return data.transcription?.trim() || '';
+        } catch (e) {
+            console.error('[user transcript] transcribe failed:', e);
+            return '';
         }
     }, []);
 
@@ -305,6 +337,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
         nextPlayTimeRef.current = 0;
         setAiCaption('');
         aiPcmChunksRef.current = [];
+        userPcmChunksRef.current = [];
         newTurnRef.current = true;
         setIsConnected(false);
         setIsAiSpeaking(false);
@@ -354,6 +387,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
 
             workletNode.port.onmessage = (event) => {
                 if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                    userPcmChunksRef.current.push(new Int16Array(event.data));
                     const base64Audio = arrayBufferToBase64(event.data);
 
                     const msg = {
@@ -470,6 +504,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
         stopRecording,
         resetCaption,
         sendTextMessage,
+        transcribeUserAudio,
         getAnalyserNode: useCallback(() => analyserRef.current, [])
     };
 }
