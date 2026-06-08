@@ -29,6 +29,8 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
     const userTranscriptRef = useRef<string>('');
     // Ref so playPcmAudio can call flushUserAudio without circular useCallback deps
     const flushUserAudioRef = useRef<() => Promise<void>>(() => Promise.resolve());
+    // Track AI speaking state as a ref so the worklet onmessage closure can read it
+    const isAiSpeakingRef = useRef<boolean>(false);
 
     // Audio Playback
     const playPcmAudio = useCallback((base64Data: string) => {
@@ -91,12 +93,14 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
             nextPlayTimeRef.current += audioBuffer.duration;
             activeSourcesRef.current.add(source);
 
+            isAiSpeakingRef.current = true;
             setIsAiSpeaking(true);
 
             source.onended = () => {
                 activeSourcesRef.current.delete(source);
                 // If this is the last chunk, mark as not speaking
                 if (ctx.currentTime >= nextPlayTimeRef.current - 0.1) {
+                    isAiSpeakingRef.current = false;
                     setIsAiSpeaking(false);
                 }
             };
@@ -374,6 +378,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
         userTranscriptRef.current = '';
         newTurnRef.current = true;
         setIsConnected(false);
+        isAiSpeakingRef.current = false;
         setIsAiSpeaking(false);
     }, [stopRecording]);
 
@@ -421,7 +426,10 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
 
             workletNode.port.onmessage = (event) => {
                 if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-                    userPcmChunksRef.current.push(new Int16Array(event.data));
+                    // Only buffer user audio when AI is NOT speaking (avoid mic echo of AI output)
+                    if (!isAiSpeakingRef.current) {
+                        userPcmChunksRef.current.push(new Int16Array(event.data));
+                    }
                     const base64Audio = arrayBufferToBase64(event.data);
 
                     const msg = {
