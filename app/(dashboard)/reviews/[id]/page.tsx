@@ -49,7 +49,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                         <Text color="gray.300" fontSize="sm" lineHeight="1.7">{review.question.content}</Text>
                     </Box>
                     <Box p={6} borderRadius="xl" style={{ background: '#0d0d14', border: '1px solid rgba(255,255,255,0.06)' }}>
-                        <Heading size="sm" fontWeight="700" mb={3}>Your Answer</Heading>
+                        <Heading size="sm" fontWeight="700" mb={3}>Transcript</Heading>
                         <Box whiteSpace="pre-wrap" fontSize="xs" fontFamily="monospace" color="#22c55e" lineHeight="1.8">
                             {(review.answer || '// No code submitted').replace(/\*/g, '').replace(/\\n/g, '\n')}
                         </Box>
