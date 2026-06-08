@@ -9,6 +9,7 @@ const genAI = new GoogleGenerativeAI(apiKey || "");
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 export const maxDuration = 60; // Increase timeout to 60 seconds for Vercel
+export const config = { api: { bodyParser: { sizeLimit: '20mb' } } };
 
 export async function POST(req: Request) {
     if (!apiKey) {

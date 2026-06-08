@@ -26,6 +26,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
     const aiPcmChunksRef = useRef<Int16Array[]>([]);
     const newTurnRef = useRef<boolean>(true);
     const userPcmChunksRef = useRef<Int16Array[]>([]);
+    const userTranscriptRef = useRef<string>('');
 
     // Audio Playback
     const playPcmAudio = useCallback((base64Data: string) => {
@@ -131,36 +132,50 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
         }
     }, []);
 
-    const transcribeUserAudio = useCallback(async (): Promise<string> => {
-        const chunks = userPcmChunksRef.current;
-        if (chunks.length === 0) return '';
-        const totalLen = chunks.reduce((s, c) => s + c.length, 0);
-        const combined = new Int16Array(totalLen);
-        let off = 0;
-        for (const c of chunks) { combined.set(c, off); off += c.length; }
-        const sampleRate = 16000;
-        const buf = new ArrayBuffer(44 + combined.length * 2);
+    const buildWav = useCallback((samples: Int16Array, sampleRate: number): Blob => {
+        const buf = new ArrayBuffer(44 + samples.length * 2);
         const v = new DataView(buf);
         const ws = (o: number, s: string) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
-        ws(0, 'RIFF'); v.setUint32(4, 36 + combined.length * 2, true);
+        ws(0, 'RIFF'); v.setUint32(4, 36 + samples.length * 2, true);
         ws(8, 'WAVE'); ws(12, 'fmt '); v.setUint32(16, 16, true);
         v.setUint16(20, 1, true); v.setUint16(22, 1, true);
         v.setUint32(24, sampleRate, true); v.setUint32(28, sampleRate * 2, true);
         v.setUint16(32, 2, true); v.setUint16(34, 16, true);
-        ws(36, 'data'); v.setUint32(40, combined.length * 2, true);
-        for (let i = 0; i < combined.length; i++) v.setInt16(44 + i * 2, combined[i], true);
-        const wavBlob = new Blob([buf], { type: 'audio/wav' });
+        ws(36, 'data'); v.setUint32(40, samples.length * 2, true);
+        for (let i = 0; i < samples.length; i++) v.setInt16(44 + i * 2, samples[i], true);
+        return new Blob([buf], { type: 'audio/wav' });
+    }, []);
+
+    // Call when user stops mic — transcribes current segment, appends to running transcript
+    const flushUserAudio = useCallback(async (): Promise<void> => {
+        const chunks = userPcmChunksRef.current;
+        if (chunks.length === 0) return;
+        const totalLen = chunks.reduce((s, c) => s + c.length, 0);
+        const combined = new Int16Array(totalLen);
+        let off = 0;
+        for (const c of chunks) { combined.set(c, off); off += c.length; }
+        userPcmChunksRef.current = []; // clear immediately so next turn starts fresh
+        const wav = buildWav(combined, 16000);
         const formData = new FormData();
-        formData.append('file', new File([wavBlob], 'user.wav', { type: 'audio/wav' }));
+        formData.append('file', new File([wav], 'user.wav', { type: 'audio/wav' }));
         try {
             const res = await fetch('/api/transcribe', { method: 'POST', body: formData });
             const data = await res.json();
-            return data.transcription?.trim() || '';
+            const text = data.transcription?.trim();
+            if (text) {
+                userTranscriptRef.current += (userTranscriptRef.current ? '\n\n' : '') + text;
+            }
         } catch (e) {
-            console.error('[user transcript] transcribe failed:', e);
-            return '';
+            console.error('[user transcript] flush failed:', e);
         }
-    }, []);
+    }, [buildWav]);
+
+    // Returns accumulated transcript from all prior flushes
+    const transcribeUserAudio = useCallback(async (): Promise<string> => {
+        // Flush any remaining buffered audio (last partial segment)
+        await flushUserAudio();
+        return userTranscriptRef.current;
+    }, [flushUserAudio]);
 
     const handleServerContent = useCallback((response: any) => {
         if (response.serverContent?.modelTurn?.parts) {
@@ -338,6 +353,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
         setAiCaption('');
         aiPcmChunksRef.current = [];
         userPcmChunksRef.current = [];
+        userTranscriptRef.current = '';
         newTurnRef.current = true;
         setIsConnected(false);
         setIsAiSpeaking(false);
@@ -505,6 +521,7 @@ export function useGeminiLiveClient(config?: LiveClientConfig) {
         resetCaption,
         sendTextMessage,
         transcribeUserAudio,
+        flushUserAudio,
         getAnalyserNode: useCallback(() => analyserRef.current, [])
     };
 }
